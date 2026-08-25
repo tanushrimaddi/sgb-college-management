@@ -1,0 +1,1251 @@
+{
+  "Science": {
+    "1st Year": {
+      "Monday": {
+        "09:00-10:00": [
+          "Micro-B-7",
+          "Physics-B-22"
+        ],
+        "10:00-11:00": [
+          "Chemistry-B-14",
+          "Elective-B-18"
+        ],
+        "11:00-12:00": [
+          "Mathematics-B-22"
+        ],
+        "11:00-15:00": [
+          "Practical: Microbiology",
+          "Practical: Computer Science"
+        ],
+        "15:00-19:00": [
+          "SEC: Microbiology",
+          "SEC: Computer Science"
+        ]
+      },
+      "Tuesday": {
+        "09:00-10:00": [
+          "Micro-B-7",
+          "Physics-B-22"
+        ],
+        "10:00-11:00": [
+          "Chemistry-B-14",
+          "Elective-B-18"
+        ],
+        "11:00-12:00": [
+          "Mathematics-B-22"
+        ],
+        "11:00-15:00": [
+          "Practical: Zoology"
+        ],
+        "15:00-19:00": [
+          "SEC: Zoology"
+        ]
+      },
+      "Wednesday": {
+        "09:00-10:00": [
+          "Botany-B-22"
+        ],
+        "10:00-11:00": [
+          "English (Comp)-B-33"
+        ],
+        "11:00-12:00": [],
+        "11:00-15:00": [
+          "Practical: Botany",
+          "Practical: Mathematics"
+        ],
+        "15:00-19:00": [
+          "SEC: Botany",
+          "SEC: Mathematics"
+        ]
+      },
+      "Thursday": {
+        "09:00-10:00": [
+          "Botany-B-22"
+        ],
+        "10:00-11:00": [
+          "English (Comp)-B-33"
+        ],
+        "11:00-12:00": [],
+        "11:00-15:00": [
+          "Practical: Physics"
+        ],
+        "15:00-19:00": [
+          "SEC: Physics"
+        ]
+      },
+      "Friday": {
+        "09:00-10:00": [
+          "Zoology-B-8",
+          "Computer Science-B-22"
+        ],
+        "10:00-11:00": [
+          "GE"
+        ],
+        "11:00-12:00": [
+          "IKS-B-25"
+        ],
+        "11:00-15:00": [
+          "Practical: Chemistry"
+        ],
+        "15:00-19:00": [
+          "SEC: Chemistry"
+        ]
+      },
+      "Saturday": {
+        "09:00-10:00": [
+          "Zoology-B-8",
+          "Computer Science-B-22"
+        ],
+        "10:00-11:00": [
+          "GE"
+        ],
+        "11:00-12:00": [
+          "IKS-B-25"
+        ],
+        "11:00-15:00": [
+          "Practical: Chemistry-C-12",
+          "Practical: Elective"
+        ],
+        "15:00-19:00": [
+          "SEC: Elective"
+        ]
+      }
+    },
+
+    "2nd Year": {
+      "Monday": {
+        "09:00-10:00": [
+          "Minor: Chemistry-B-14",
+          "Minor: Elective-B-18",
+          "Minor: Microbiology-B-2",
+          "Minor: Physics-B-20",
+          "Minor: Zoology-B-8",
+          "Minor: Computer Science-B-13",
+          "Minor: Botany-B-4",
+          "Minor: Mathematics-B-17"
+        ],
+        "10:00-11:00": [
+          "English-B-34"
+        ],
+        "11:00-12:00": [
+          "CCC-B-14"
+        ],
+        "11:00-15:00": [
+          "Major Practical: Elective",
+          "Major Practical: Chemistry"
+        ],
+        "15:00-19:00": [
+          "VC: Chemistry",
+          "VC: Elective",
+          "VC: Zoology",
+          "VC: Physics",
+          "VC: Botany",
+          "VC: Mathematics"
+        ]
+      },
+      "Tuesday": {
+        "09:00-10:00": [
+          "Minor: Chemistry-B-14",
+          "Minor: Elective-B-18",
+          "Minor: Microbiology-B-2",
+          "Minor: Physics-B-20",
+          "Minor: Zoology-B-8",
+          "Minor: Computer Science-B-13",
+          "Minor: Botany-B-4",
+          "Minor: Mathematics-B-17"
+        ],
+        "10:00-11:00": [
+          "English-B-34"
+        ],
+        "11:00-12:00": [
+          "CCC-B-14"
+        ],
+        "11:00-15:00": [
+          "Major Practical: Elective",
+          "Major Practical: Chemistry"
+        ],
+        "15:00-19:00": [
+          "Minor Practical: Elective",
+          "Minor Practical: Chemistry"
+        ]
+      },
+      "Wednesday": {
+        "09:00-10:00": [
+          "Major: Chemistry-B-14",
+          "Major: Elective-B-18",
+          "Major: Microbiology-B-7",
+          "Major: Physics-B-20",
+          "Major: Zoology-B-8",
+          "Major: Computer Science-B-13",
+          "Major: Botany-B-4",
+          "Major: Mathematics-B-17"
+        ],
+        "10:00-11:00": [
+          "S.L.: Marathi-B-22",
+          "S.L.: Hindi-B-14"
+        ],
+        "11:00-12:00": [],
+        "11:00-15:00": [
+          "Major Practical: Zoology",
+          "Major Practical: Physics",
+          "Major Practical: Computer Science"
+        ],
+        "15:00-19:00": [
+          "Minor Practical: Microbiology",
+          "Minor Practical: Computer Science"
+        ]
+      },
+      "Thursday": {
+        "09:00-10:00": [
+          "Major: Chemistry-B-14",
+          "Major: Elective-B-18",
+          "Major: Microbiology-B-7",
+          "Major: Physics-B-20",
+          "Major: Zoology-B-8",
+          "Major: Computer Science-B-13",
+          "Major: Botany-B-4",
+          "Major: Mathematics-B-17"
+        ],
+        "10:00-11:00": [
+          "S.L.: Marathi-B-22",
+          "S.L.: Hindi-B-14"
+        ],
+        "11:00-12:00": [],
+        "11:00-15:00": [
+          "Major Practical: Botany",
+          "Major Practical: Zoology",
+          "Major Practical: Computer Science"
+        ],
+        "15:00-19:00": [
+          "VC: Microbiology",
+          "VC: Computer Science"
+        ]
+      },
+      "Friday": {
+        "09:00-10:00": [
+          "Major: Chemistry-B-14",
+          "Major: Elective-B-18",
+          "Major: Microbiology-B-7",
+          "Major: Physics-B-20",
+          "Major: Zoology-B-2",
+          "Major: Computer Science-B-13",
+          "Major: Botany-B-4",
+          "Major: Mathematics-B-17"
+        ],
+        "10:00-11:00": [
+          "GE"
+        ],
+        "11:00-12:00": [],
+        "11:00-15:00": [
+          "Major Practical: Botany",
+          "Major Practical: Physics",
+          "Major Practical: Mathematics",
+          "Major Practical: Microbiology"
+        ],
+        "15:00-19:00": [
+          "Minor Practical: Botany",
+          "Minor Practical: Physics",
+          "Minor Practical: Mathematics",
+          "Minor Practical: Zoology"
+        ]
+      },
+      "Saturday": {
+        "09:00-10:00": [
+          "Major: Chemistry-B-14",
+          "Major: Elective-B-18",
+          "Major: Microbiology-B-7",
+          "Major: Physics-B-20",
+          "Major: Zoology-B-2",
+          "Major: Computer Science-B-13",
+          "Major: Botany-B-4",
+          "Major: Mathematics-B-17"
+        ],
+        "10:00-11:00": [
+          "GE"
+        ],
+        "11:00-12:00": [],
+        "11:00-15:00": [
+          "Major Practical: Mathematics",
+          "Major Practical: Microbiology"
+        ]
+      }
+    },
+
+    "3rd Year": {
+      "Monday": {
+        "10:00-11:00": [
+          "Chemistry-B-2",
+          "Microbiology-B-7",
+          "Physics-B-22",
+          "Zoology-B-8",
+          "Computer Science-B-13",
+          "Botany-B-4",
+          "Mathematics-B-17"
+        ],
+        "11:00-12:00": [
+          "Elective-B-18"
+        ],
+        "11:00-15:00": [
+          "Major Practical: Physics",
+          "Major Practical: Zoology",
+          "Major Practical: Botany",
+          "Major Practical: Mathematics"
+        ]
+      },
+      "Tuesday": {
+        "10:00-11:00": [
+          "Chemistry-B-2",
+          "Microbiology-B-7",
+          "Physics-B-22",
+          "Zoology-B-8",
+          "Computer Science-B-13",
+          "Botany-B-4",
+          "Mathematics-B-17"
+        ],
+        "11:00-12:00": [
+          "Elective-B-18"
+        ],
+        "11:00-15:00": [
+          "Major Practical: Physics",
+          "Major Practical: Botany",
+          "Major Practical: Mathematics",
+          "Major Practical: Microbiology",
+          "Major Practical: Computer Science"
+        ]
+      },
+      "Wednesday": {
+        "10:00-11:00": [
+          "Chemistry-B-14",
+          "Elective-B-18",
+          "Microbiology-B-7",
+          "Physics-B-22",
+          "Zoology-B-8",
+          "Computer Science-B-13",
+          "Botany-B-4",
+          "Mathematics-B-17"
+        ],
+        "11:00-12:00": [
+          "IKS"
+        ],
+        "11:00-15:00": [
+          "Major Practical: Chemistry",
+          "Major Practical: Elective",
+          "Major Practical: Microbiology"
+        ]
+      },
+      "Thursday": {
+        "10:00-11:00": [
+          "Chemistry-B-14",
+          "Elective-B-18",
+          "Microbiology-B-7",
+          "Physics-B-22",
+          "Zoology-B-8",
+          "Computer Science-B-13",
+          "Botany-B-4",
+          "Mathematics-B-17"
+        ],
+        "11:00-12:00": [
+          "IKS"
+        ],
+        "11:00-15:00": [
+          "Major Practical: Chemistry",
+          "Major Practical: Elective",
+          "Elective Practical: Mathematics",
+          "Elective Practical: Microbiology"
+        ]
+      },
+      "Friday": {
+        "10:00-11:00": [
+          "Chemistry-B-14",
+          "Elective-B-18",
+          "Microbiology-B-7",
+          "Physics-B-22",
+          "Zoology-B-8",
+          "Computer Science-B-13",
+          "Botany-B-4",
+          "Mathematics-B-17"
+        ],
+        "11:00-12:00": [
+          "Elective: Chemistry",
+          "Elective: Elective",
+          "Elective: Microbiology",
+          "Elective: Physics",
+          "Elective: Zoology",
+          "Elective: Computer Science",
+          "Elective: Botany",
+          "Elective: Mathematics"
+        ],
+        "11:00-15:00": [
+          "Elective Practical: Chemistry",
+          "Elective Practical: Elective",
+          "Elective Practical: Computer Science",
+          "Elective Practical: Zoology"
+        ]
+      },
+      "Saturday": {
+        "10:00-11:00": [
+          "Chemistry-B-14",
+          "Elective-B-18",
+          "Microbiology-B-7",
+          "Physics-B-22",
+          "Zoology-B-8",
+          "Computer Science-B-13",
+          "Botany-B-4",
+          "Mathematics-B-17"
+        ],
+        "11:00-12:00": [
+          "Elective"
+        ],
+        "11:00-15:00": [
+          "Elective Practical: Physics",
+          "Elective Practical: Botany",
+          "Elective Practical: Computer Science",
+          "Elective Practical: Zoology"
+        ],
+        "15:00-19:00": [
+          "VC: Chemistry",
+          "VC: Elective",
+          "VC: Zoology",
+          "VC: Computer Science",
+          "VC: Microbiology",
+          "VC: Physics",
+          "VC: Botany",
+          "VC: Mathematics"
+        ]
+      }
+    }
+  },
+
+  "Arts": {
+    "1st Year": {
+      "Monday": {
+        "09:00-10:00": [
+          "Pol. Sci.-25",
+          "His.-29",
+          "Socio.-24",
+          "Phil.-Dept."
+        ],
+        "10:00-11:00": [
+          "Marathi-Dept",
+          "Hindi-Dept",
+          "Eng.-Dept"
+        ],
+        "11:00-12:00": [
+          "Marathi-Dept",
+          "Hindi-Dept",
+          "Eng.-Dept"
+        ],
+        "12:00-13:00": [
+          "GE - Reading Room"
+        ],
+        "13:00-14:00": [
+          "SEC",
+          "P.A. Reading Room",
+          "Phil.-34",
+          "Eco.-B-2",
+          "Chem Lab"
+        ],
+        "14:00-15:00": [
+          "SEC",
+          "Pol. Sci.-33"
+        ]
+      },
+      "Tuesday": {
+        "09:00-10:00": [
+          "Pol. Sci.-25",
+          "His.-29",
+          "Socio.-24",
+          "Phil.-Dept."
+        ],
+        "10:00-11:00": [
+          "Marathi-Dept",
+          "Hindi-Dept",
+          "Eng.-Dept"
+        ],
+        "11:00-12:00": [
+          "Marathi-Dept",
+          "Hindi-Dept",
+          "Eng.-Dept"
+        ],
+        "12:00-13:00": [
+          "GE - Reading Room"
+        ],
+        "13:00-14:00": [
+          "SEC",
+          "P.A. Reading Room",
+          "Phil.-34",
+          "Eco.-B-2",
+          "Chem Lab"
+        ],
+        "14:00-15:00": [
+          "SEC",
+          "Pol. Sci.-33"
+        ]
+      },
+      "Wednesday": {
+        "09:00-10:00": [
+          "Pol. Sci.-25",
+          "His.-29",
+          "Socio.-24",
+          "Phil.-Dept."
+        ],
+        "10:00-11:00": [
+          "AEC - Sem I",
+          "Eng-I (Comp) - B-33"
+        ],
+        "11:00-12:00": [
+          "P.A.-A-12",
+          "Eco.-Reading Room"
+        ],
+        "12:00-13:00": [],
+        "13:00-14:00": [
+          "SEC",
+          "His.-29",
+          "Socio.-31"
+        ],
+        "14:00-15:00": []
+      },
+      "Thursday": {
+        "09:00-10:00": [
+          "Pol. Sci.-25",
+          "His.-29",
+          "Socio.-24",
+          "Phil.-Dept."
+        ],
+        "10:00-11:00": [
+          "AEC - Sem I",
+          "Eng (Comp) - B-33"
+        ],
+        "11:00-12:00": [
+          "P.A.-A-12",
+          "Eco.-Reading Room"
+        ],
+        "12:00-13:00": [],
+        "13:00-14:00": [
+          "SEC",
+          "His.-29",
+          "Socio.-31"
+        ],
+        "14:00-15:00": []
+      },
+      "Friday": {
+        "09:00-10:00": [
+          "P.A.-25",
+          "Eco.-24"
+        ],
+        "10:00-11:00": [
+          "SL - Sem II",
+          "Marathi-27",
+          "Hindi-29"
+        ],
+        "11:00-12:00": [
+          "IKS - Reading Room"
+        ],
+        "12:00-13:00": [],
+        "13:00-14:00": [
+          "SEC",
+          "Marathi-(Dept.)",
+          "Hindi-(Dept.)",
+          "English-(Dept.)"
+        ],
+        "14:00-15:00": []
+      },
+      "Saturday": {
+        "09:00-10:00": [
+          "P.A.-25",
+          "Eco.-24"
+        ],
+        "10:00-11:00": [
+          "SL - Sem II",
+          "Marathi-27",
+          "Hindi-29"
+        ],
+        "11:00-12:00": [
+          "IKS - Reading Room"
+        ],
+        "12:00-13:00": [],
+        "13:00-14:00": [
+          "SEC",
+          "Marathi-(Dept.)",
+          "Hindi-(Dept.)",
+          "English-(Dept.)"
+        ],
+        "14:00-15:00": []
+      }
+    },
+
+    "2nd Year": {
+      "Monday": {
+        "09:00-10:00": [
+          "Major",
+          "Mar.-Reading Room",
+          "Hin.-27",
+          "Eng.-A-12"
+        ],
+        "10:00-11:00": [
+          "Eng AEC (Comp) - B-34"
+        ],
+        "11:00-12:00": [
+          "Minor",
+          "Eco.-24",
+          "P.A.-25",
+          "Phil.-27",
+          "Environmental Studies-Languages"
+        ],
+        "12:00-13:00": [
+          "Minor",
+          "Mar.-Dept.",
+          "Hin.-Dept.",
+          "English-Dept.",
+          "VSC-Social Sciences"
+        ],
+        "13:00-14:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12"
+        ],
+        "14:00-15:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12",
+          "VSC-Languages"
+        ]
+      },
+      "Tuesday": {
+        "09:00-10:00": [
+          "Major",
+          "Mar.-Reading Room",
+          "Hin.-27",
+          "Eng.-A-12"
+        ],
+        "10:00-11:00": [
+          "Eng AEC (Comp) - B-34"
+        ],
+        "11:00-12:00": [
+          "Minor",
+          "Eco.-24",
+          "P.A.-25",
+          "Phil.-27",
+          "Environmental Studies-Languages"
+        ],
+        "12:00-13:00": [
+          "Minor",
+          "Mar.-Dept.",
+          "Hin.-Dept.",
+          "English-Dept.",
+          "VSC-Social Sciences"
+        ],
+        "13:00-14:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12"
+        ],
+        "14:00-15:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12",
+          "VSC-Languages"
+        ]
+      },
+      "Wednesday": {
+        "09:00-10:00": [
+          "Major",
+          "Mar.-Reading Room",
+          "Hin.-27",
+          "Eng.-A-12"
+        ],
+        "10:00-11:00": [
+          "SL",
+          "Mar.-31",
+          "Hindi-34"
+        ],
+        "11:00-12:00": [
+          "Minor",
+          "Eco.-24",
+          "P.A.-25",
+          "Phil.-27"
+        ],
+        "12:00-13:00": [
+          "Minor",
+          "Mar.-Dept.",
+          "Hin.-Dept.",
+          "English-Dept.",
+          "CCC-Social Sciences"
+        ],
+        "13:00-14:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12"
+        ],
+        "14:00-15:00": [
+          "Minor",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-29",
+          "Pol.-A-12",
+          "CCC-Languages"
+        ]
+      },
+      "Thursday": {
+        "09:00-10:00": [
+          "Major",
+          "Mar.-Reading Room",
+          "Hin.-27",
+          "Eng.-A-12"
+        ],
+        "10:00-11:00": [
+          "SL",
+          "Mar.-31",
+          "Hindi-34"
+        ],
+        "11:00-12:00": [
+          "Minor",
+          "Eco.-24",
+          "P.A.-25",
+          "Phil.-27"
+        ],
+        "12:00-13:00": [
+          "Minor",
+          "Mar.-Dept.",
+          "Hin.-Dept.",
+          "English-Dept.",
+          "CCC-Social Sciences"
+        ],
+        "13:00-14:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12"
+        ],
+        "14:00-15:00": [
+          "Minor",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-29",
+          "Pol.-A-12",
+          "CCC-Languages"
+        ]
+      },
+      "Friday": {
+        "09:00-10:00": [
+          "Major",
+          "Mar.-Reading Room",
+          "Hin.-27",
+          "Eng.-A-12",
+          "Environmental Studies-Social Sciences"
+        ],
+        "10:00-11:00": [
+          "GE"
+        ],
+        "11:00-12:00": [
+          "Major",
+          "Marathi-Dept",
+          "Hindi-Dept",
+          "Eng.-A-12",
+          "IKS-Social Sciences"
+        ],
+        "12:00-13:00": [
+          "Minor",
+          "His.-B-2 Chem. Lab",
+          "Socio.-ICT-II",
+          "Pol. Sci.-Reading Room",
+          "IKS-Languages"
+        ],
+        "13:00-14:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12"
+        ],
+        "14:00-15:00": [
+          "Minor",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-29",
+          "Pol.-A-12"
+        ]
+      },
+      "Saturday": {
+        "09:00-10:00": [
+          "Major",
+          "Mar.-Reading Room",
+          "Hin.-27",
+          "Eng.-A-12",
+          "Environmental Studies-Social Sciences"
+        ],
+        "10:00-11:00": [
+          "GE"
+        ],
+        "11:00-12:00": [
+          "Major",
+          "Marathi-Dept",
+          "Hindi-Dept",
+          "Eng.-A-12",
+          "IKS-Social Sciences"
+        ],
+        "12:00-13:00": [
+          "Minor",
+          "His.-B-2 Chem. Lab",
+          "Socio.-ICT-II",
+          "Pol. Sci.-Reading Room",
+          "IKS-Languages"
+        ],
+        "13:00-14:00": [
+          "Major",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-33",
+          "Pol.-A-12"
+        ],
+        "14:00-15:00": [
+          "Minor",
+          "P.A.-25",
+          "Phil.-Dept.",
+          "ECO.-24",
+          "His.-27",
+          "Socio.-29",
+          "Pol.-A-12"
+        ]
+      }
+    },
+
+    "3rd Year": {
+      "Monday": {
+        "09:00-10:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-Dept",
+          "Core | Eng.-Dept"
+        ],
+        "10:00-11:00": [
+          "Core | P.A.-25",
+          "Core | Phil.-Dept.",
+          "Core | Eco.-A12",
+          "Core | His.-29",
+          "Core | Socio.-24",
+          "Core | Pol. Reading Room"
+        ],
+        "11:00-12:00": [
+          "Elective | Mar.-Reading Room",
+          "Elective | Hin.-?",
+          "Elective | Eng.-A-12",
+          "Elective | P.A.-29",
+          "Elective | Phil.-Dept."
+        ],
+        "12:00-13:00": [
+          "Core | Marathi ICT-II",
+          "Core | Hindi ICT-I",
+          "Core | Eng.-A-12",
+          "Core | P.A.-24",
+          "Core | Phil.-Dept.",
+          "Core | ECO.-27",
+          "Core | His.-29",
+          "Core | Socio.-25",
+          "Core | Pol.-B-17"
+        ],
+        "13:00-14:00": [
+          "Electives | Eco.-ICT-I",
+          "Electives | His.-B-17",
+          "Electives | Socio.-ICT-II",
+          "Electives | Pol.-31"
+        ],
+        "14:00-15:00": [
+          "VSC | Marathi-Dept",
+          "VSC | Hindi-Dept",
+          "VSC | Eng.-Dept",
+          "VSC | P.A.-33",
+          "VSC | Phil.-Dept.",
+          "VSC | ECO.-31",
+          "VSC | His.-34",
+          "VSC | Socio.-ICT-I",
+          "VSC | Pol.-ICT-II"
+        ]
+      },
+      "Tuesday": {
+        "09:00-10:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-Dept",
+          "Core | Eng.-Dept"
+        ],
+        "10:00-11:00": [
+          "Core | P.A.-25",
+          "Core | Phil.-Dept.",
+          "Core | Eco.-A12",
+          "Core | His.-29",
+          "Core | Socio.-24",
+          "Core | Pol. Reading Room"
+        ],
+        "11:00-12:00": [
+          "Elective | Mar.-Reading Room",
+          "Elective | Hin.-?",
+          "Elective | Eng.-A-12",
+          "Elective | P.A.-29",
+          "Elective | Phil.-Dept."
+        ],
+        "12:00-13:00": [
+          "Core | Marathi ICT-II",
+          "Core | Hindi ICT-I",
+          "Core | Eng.-A-12",
+          "Core | P.A.-24",
+          "Core | Phil.-Dept.",
+          "Core | ECO.-27",
+          "Core | His.-29",
+          "Core | Socio.-25",
+          "Core | Pol.-B-17"
+        ],
+        "13:00-14:00": [
+          "Electives | Eco.-ICT-I",
+          "Electives | His.-B-17",
+          "Electives | Socio.-ICT-II",
+          "Electives | Pol.-31"
+        ],
+        "14:00-15:00": [
+          "VSC | Marathi-Dept",
+          "VSC | Hindi-Dept",
+          "VSC | Eng.-Dept",
+          "VSC | P.A.-33",
+          "VSC | Phil.-Dept.",
+          "VSC | ECO.-31",
+          "VSC | His.-34",
+          "VSC | Socio.-ICT-I",
+          "VSC | Pol.-ICT-II"
+        ]
+      },
+      "Wednesday": {
+        "09:00-10:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-Dept",
+          "Core | Eng.-Dept"
+        ],
+        "10:00-11:00": [
+          "Core | P.A.-25",
+          "Core | Phil.-Dept.",
+          "Core | Eco.-A12",
+          "Core | His.-29",
+          "Core | Socio.-24",
+          "Core | Pol. Reading Room"
+        ],
+        "11:00-12:00": [
+          "Elective | Mar.-Dept.",
+          "Elective | Hin.-Dept.",
+          "Elective | Eng.-Dept.",
+          "Elective | P.A.-29",
+          "Elective | Phil.-Dept."
+        ],
+        "12:00-13:00": [
+          "Core | Marathi ICT-II",
+          "Core | Hindi ICT-I",
+          "Core | Eng.-A-12",
+          "Core | P.A.-24",
+          "Core | Phil.-Dept.",
+          "Core | ECO.-27",
+          "Core | His.-29",
+          "Core | Socio.-25",
+          "Core | Pol.-B-17"
+        ],
+        "13:00-14:00": [],
+        "14:00-15:00": [
+          "FP | Marathi-Dept",
+          "FP | Hindi-Dept",
+          "FP | Eng.-Dept",
+          "FP | P.A.-33",
+          "FP | Phil.-Dept.",
+          "FP | ECO.-31",
+          "FP | His.-34",
+          "FP | Socio.-ICT-I",
+          "FP | Pol.-ICT-II"
+        ]
+      },
+      "Thursday": {
+        "09:00-10:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-Dept",
+          "Core | Eng.-Dept"
+        ],
+        "10:00-11:00": [
+          "Core | P.A.-25",
+          "Core | Phil.-Dept.",
+          "Core | Eco.-A12",
+          "Core | His.-29",
+          "Core | Socio.-24",
+          "Core | Pol. Reading Room"
+        ],
+        "11:00-12:00": [
+          "Elective | Mar.-Reading Room",
+          "Elective | Hin.-?",
+          "Elective | Eng.-A-12",
+          "Elective | P.A.-29",
+          "Elective | Phil.-Dept."
+        ],
+        "12:00-13:00": [
+          "Core | Marathi ICT-II",
+          "Core | Hindi ICT-I",
+          "Core | Eng.-A-12",
+          "Core | P.A.-24",
+          "Core | Phil.-Dept.",
+          "Core | ECO.-27",
+          "Core | His.-29",
+          "Core | Socio.-25",
+          "Core | Pol.-B-17"
+        ],
+        "13:00-14:00": [],
+        "14:00-15:00": [
+          "FP | Marathi-Dept",
+          "FP | Hindi-Dept",
+          "FP | Eng.-Dept",
+          "FP | P.A.-33",
+          "FP | Phil.-Dept.",
+          "FP | ECO.-31",
+          "FP | His.-34",
+          "FP | Socio.-ICT-I",
+          "FP | Pol.-ICT-II"
+        ]
+      },
+      "Friday": {
+        "09:00-10:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-Dept",
+          "Core | Eng.-Dept"
+        ],
+        "10:00-11:00": [
+          "Core | P.A.-25",
+          "Core | Phil.-Dept.",
+          "Core | Eco.-A12",
+          "Core | His.-29",
+          "Core | Socio.-24",
+          "Core | Pol. Reading Room"
+        ],
+        "11:00-12:00": [
+          "Elective | Eco.-24",
+          "Elective | His.-25",
+          "Elective | Pol.-27",
+          "Elective | Socio.-29"
+        ],
+        "12:00-13:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-ICT-I",
+          "Core | Eng.-A-12",
+          "Core | P.A.-24",
+          "Core | Phil.-Dept.",
+          "Core | ECO.-27",
+          "Core | His.-29",
+          "Core | Socio.-25",
+          "Core | Pol.-B-17"
+        ],
+        "13:00-14:00": [],
+        "14:00-15:00": [
+          "FP | Marathi-Dept",
+          "FP | Hindi-Dept",
+          "FP | Eng.-Dept",
+          "FP | P.A.-33",
+          "FP | Phil.-Dept.",
+          "FP | ECO.-31",
+          "FP | His.-34",
+          "FP | Socio.-ICT-I",
+          "FP | Pol.-ICT-II"
+        ]
+      },
+      "Saturday": {
+        "09:00-10:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-Dept",
+          "Core | Eng.-Dept"
+        ],
+        "10:00-11:00": [
+          "Core | P.A.-25",
+          "Core | Phil.-Dept.",
+          "Core | Eco.-A12",
+          "Core | His.-29",
+          "Core | Socio.-24",
+          "Core | Pol. Reading Room"
+        ],
+        "11:00-12:00": [
+          "Elective | Eco.-24",
+          "Elective | His.-25",
+          "Elective | Pol.-27",
+          "Elective | Socio.-29"
+        ],
+        "12:00-13:00": [
+          "Core | Marathi-Dept",
+          "Core | Hindi-ICT-I",
+          "Core | Eng.-A-12",
+          "Core | P.A.-24",
+          "Core | Phil.-Dept.",
+          "Core | ECO.-27",
+          "Core | His.-29",
+          "Core | Socio.-25",
+          "Core | Pol.-B-17"
+        ],
+        "13:00-14:00": [],
+        "14:00-15:00": [
+          "FP | Marathi-Dept",
+          "FP | Hindi-Dept",
+          "FP | Eng.-Dept",
+          "FP | P.A.-33",
+          "FP | Phil.-Dept.",
+          "FP | ECO.-31",
+          "FP | His.-34",
+          "FP | Socio.-ICT-I",
+          "FP | Pol.-ICT-II"
+        ]
+      }
+    }
+  },
+
+  "Commerce": {
+    "1st Year": {
+      "Monday": {
+        "09:00-10:00": ["F.A/C"],
+        "10:00-11:00": ["Business Economics"],
+        "11:00-12:00": ["Business Statistics"],
+        "12:00-13:00": ["CCC"]
+      },
+      "Tuesday": {
+        "09:00-10:00": ["F.A/C"],
+        "10:00-11:00": ["Business Statistics"],
+        "11:00-12:00": ["Business Economics"],
+        "12:00-13:00": ["CCC"]
+      },
+      "Wednesday": {
+        "09:00-10:00": ["Advertising Skill"],
+        "10:00-11:00": ["ENG COMP (34)"],
+        "11:00-12:00": ["Business Statistics"],
+        "12:00-13:00": ["Business Economics"]
+      },
+      "Thursday": {
+        "09:00-10:00": ["Advertising Skill"],
+        "10:00-11:00": ["ENG COMP (34)"],
+        "11:00-12:00": ["Business Statistics"],
+        "12:00-13:00": ["Business Economics"]
+      },
+      "Friday": {
+        "09:00-10:00": ["F.A/C"],
+        "10:00-11:00": ["GE"],
+        "11:00-12:00": ["IKS - ICT 02"]
+      },
+      "Saturday": {
+        "09:00-10:00": ["F.A/C"],
+        "10:00-11:00": ["GE"],
+        "11:00-12:00": ["IKS - ICT 02"]
+      }
+    },
+
+    "2nd Year": {
+      "Monday": {
+        "09:00-10:00": ["COST A/C"],
+        "10:00-11:00": ["ENG - B-34"],
+        "11:00-12:00": ["CORP. A/C"],
+        "12:00-13:00": ["Business Management"]
+      },
+      "Tuesday": {
+        "09:00-10:00": ["COST A/C"],
+        "10:00-11:00": ["ENG - B-34"],
+        "11:00-12:00": ["CORP. A/C"],
+        "12:00-13:00": ["Business Management"]
+      },
+      "Wednesday": {
+        "09:00-10:00": ["CORP. A/C"],
+        "10:00-11:00": ["SL"],
+        "11:00-12:00": ["COST A/C"],
+        "12:00-13:00": ["Stock Market I"]
+      },
+      "Thursday": {
+        "09:00-10:00": ["CORP. A/C"],
+        "10:00-11:00": ["SL"],
+        "11:00-12:00": ["COST A/C"],
+        "12:00-13:00": ["Stock Market I"]
+      },
+      "Friday": {
+        "09:00-10:00": ["CCC / Environment"],
+        "10:00-11:00": ["GE"],
+        "11:00-12:00": ["Business Management"]
+      },
+      "Saturday": {
+        "09:00-10:00": ["CCC / Environment"],
+        "10:00-11:00": ["GE"],
+        "11:00-12:00": ["Business Management"]
+      }
+    },
+
+    "3rd Year": {
+      "Monday": {
+        "09:00-10:00": ["M. A/c"],
+        "10:00-11:00": ["IKS"],
+        "11:00-12:00": ["NGB&FS"],
+        "12:00-13:00": ["Field Project"],
+        "13:00-14:00": ["HRM"],
+        "14:00-15:00": ["Field Project"]
+      },
+      "Tuesday": {
+        "09:00-10:00": ["M. A/c"],
+        "10:00-11:00": ["IKS"],
+        "11:00-12:00": ["NGB&FS"],
+        "12:00-13:00": ["HRM"],
+        "13:00-14:00": ["MM (LA)"],
+        "14:00-15:00": ["Field Project"]
+      },
+      "Wednesday": {
+        "09:00-10:00": ["A. A/c"],
+        "10:00-11:00": ["M. A/c"],
+        "11:00-12:00": ["HRM"],
+        "12:00-13:00": ["NGB&FS"],
+        "13:00-14:00": ["MM (AJ)"],
+        "14:00-15:00": ["Field Project"]
+      },
+      "Thursday": {
+        "09:00-10:00": ["A. A/c"],
+        "10:00-11:00": ["M. A/c"],
+        "11:00-12:00": ["HRM"],
+        "12:00-13:00": ["NGB&FS"],
+        "13:00-14:00": ["MM (AJ)"],
+        "14:00-15:00": ["Auditing (VI)"]
+      },
+      "Friday": {
+        "09:00-10:00": ["A. A/c"],
+        "10:00-11:00": ["Auditing (SJ)"],
+        "11:00-12:00": ["Field Project"],
+        "12:00-13:00": ["Field Project"]
+      },
+      "Saturday": {
+        "09:00-10:00": ["A. A/c"],
+        "10:00-11:00": [],
+        "11:00-12:00": ["MM (KP)"],
+        "12:00-13:00": ["Field Project"],
+        "13:00-14:00": ["Field Project"]
+      }
+    }
+  }
+}
