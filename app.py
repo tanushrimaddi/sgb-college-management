@@ -15,8 +15,7 @@ from flask import (
     url_for,
     session,
     flash,
-    Response,
-    send_file
+    Response
 )
 
 from flask_sqlalchemy import SQLAlchemy
@@ -84,6 +83,13 @@ def today_ist():
 
 def now_ist_naive():
 
+    """
+    Database-friendly IST datetime.
+
+    Keeps the actual India local time but removes timezone
+    information before storing it in DateTime columns.
+    """
+
     return now_ist().replace(
         tzinfo=None
     )
@@ -125,16 +131,6 @@ DAYS = [
 TIMETABLE_FILE = os.path.join(
     BASE_DIR,
     "timetable.json"
-)
-
-
-# ============================================================
-# COLLEGE LOGO
-# ============================================================
-
-COLLEGE_LOGO_FILE = os.path.join(
-    BASE_DIR,
-    "college_logo.png"
 )
 
 
@@ -405,28 +401,6 @@ def attendance_access_required(function):
 
 
 # ============================================================
-# COLLEGE LOGO ROUTE
-# ============================================================
-
-@app.route("/college-logo.png")
-def college_logo():
-
-    if not os.path.exists(
-        COLLEGE_LOGO_FILE
-    ):
-
-        return (
-            "college_logo.png not found",
-            404
-        )
-
-    return send_file(
-        COLLEGE_LOGO_FILE,
-        mimetype="image/png"
-    )
-
-
-# ============================================================
 # DATA HELPERS
 # ============================================================
 
@@ -478,6 +452,11 @@ def get_day_data(
 
 def lecture_text(value):
 
+    """
+    Converts a single timetable lecture value
+    into readable text.
+    """
+
     if isinstance(
         value,
         str
@@ -508,6 +487,32 @@ def lecture_text(value):
 
 def get_lecture_list(value):
 
+    """
+    Converts timetable data into a list of
+    individual lectures.
+
+    Supports:
+
+        "Physics"
+
+    and:
+
+        [
+            "Physics",
+            "Chemistry",
+            "Biology"
+        ]
+
+    and:
+
+        {
+            "lectures": [
+                "Physics",
+                "Chemistry"
+            ]
+        }
+    """
+
     if isinstance(
         value,
         list
@@ -529,7 +534,6 @@ def get_lecture_list(value):
 
         return result
 
-
     if isinstance(
         value,
         tuple
@@ -550,7 +554,6 @@ def get_lecture_list(value):
                 )
 
         return result
-
 
     if isinstance(
         value,
@@ -587,7 +590,6 @@ def get_lecture_list(value):
                             )
 
                     return result
-
 
     text = lecture_text(
         value
@@ -815,6 +817,20 @@ def get_status(
     slot,
     subject
 ):
+
+    """
+    IMPORTANT:
+
+    Subject is now part of the lookup.
+
+    This allows:
+
+        Chemistry 10:00-11:00 -> Taken
+
+        Physics 10:00-11:00 -> Not Taken
+
+    to exist as two separate records.
+    """
 
     record = Attendance.query.filter_by(
         record_date=record_date,
@@ -1087,46 +1103,18 @@ a {
     z-index: 100;
 }
 
-
-/* ========================================================
-   COLLEGE LOGO
-   ======================================================== */
-
-.college-brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.logo {
     color: white;
-}
-
-.college-logo {
-    width: 46px;
-    height: 46px;
-    object-fit: contain;
-    border-radius: 8px;
-    background: white;
-    padding: 2px;
-}
-
-.logo-text {
-    color: white;
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 800;
-    line-height: 1.1;
 }
 
-.logo-text small {
+.logo small {
     display: block;
     color: #9ca3af;
     font-size: 9px;
-    margin-top: 3px;
-    letter-spacing: .5px;
+    margin-top: 2px;
 }
-
-
-/* ========================================================
-   NAVIGATION
-   ======================================================== */
 
 .nav-links {
     display: flex;
@@ -1144,11 +1132,6 @@ a {
 .nav-links a:hover {
     background: #1f2937;
 }
-
-
-/* ========================================================
-   MAIN
-   ======================================================== */
 
 .container {
     width: min(1150px, 94%);
@@ -1451,29 +1434,11 @@ th {
     margin-top: 5px;
 }
 
-
-/* ========================================================
-   MOBILE
-   ======================================================== */
-
 @media(max-width:700px) {
 
     .navbar {
         flex-direction: column;
         align-items: flex-start;
-    }
-
-    .college-brand {
-        width: 100%;
-    }
-
-    .college-logo {
-        width: 42px;
-        height: 42px;
-    }
-
-    .logo-text {
-        font-size: 17px;
     }
 
     .nav-links {
@@ -1524,38 +1489,16 @@ th {
 
 <body>
 
-
-<!-- ========================================================
-     NAVBAR
-     ======================================================== -->
-
 <nav class="navbar">
 
+<a href="{{ url_for('home') }}">
 
-<a
-href="{{ url_for('home') }}"
-class="college-brand"
->
-
-<img
-src="{{ url_for('college_logo') }}"
-class="college-logo"
-alt="SGB College Logo"
-onerror="this.style.display='none';"
->
-
-<div class="logo-text">
-
-SGB COLLEGE
-
-<small>
-MANAGEMENT SYSTEM
-</small>
-
+<div class="logo">
+🎓 SGB COLLEGE
+<small>MANAGEMENT SYSTEM</small>
 </div>
 
 </a>
-
 
 <div class="nav-links">
 
@@ -1563,4 +1506,2847 @@ MANAGEMENT SYSTEM
 🏠 Home
 </a>
 
-<a href="{{ url_for('
+<a href="{{ url_for('timetable_page') }}">
+📅 Timetable
+</a>
+
+<a href="{{ url_for('reports') }}">
+📊 Reports
+</a>
+
+{% if session.get("user_id") %}
+
+<a href="{{ url_for('attendance') }}">
+📝 Attendance
+</a>
+
+{% if session.get("is_admin") %}
+
+<a href="{{ url_for('access_control') }}">
+👥 Access
+</a>
+
+{% endif %}
+
+<a href="{{ url_for('logout') }}">
+Logout
+</a>
+
+{% else %}
+
+<a href="{{ url_for('login') }}">
+🔐 Login
+</a>
+
+{% endif %}
+
+</div>
+
+</nav>
+
+<div class="container">
+
+{% with messages = get_flashed_messages() %}
+
+{% if messages %}
+
+{% for message in messages %}
+
+<div class="alert">
+{{ message }}
+</div>
+
+{% endfor %}
+
+{% endif %}
+
+{% endwith %}
+
+{{ content|safe }}
+
+</div>
+
+<div class="footer">
+
+SGB College Management System
+
+<br>
+
+Timetable • Attendance • Reports
+
+</div>
+
+</body>
+
+</html>
+"""
+
+
+def render_page(
+    content,
+    **context
+):
+
+    body = render_template_string(
+        content,
+        **context
+    )
+
+    return render_template_string(
+        BASE_HTML,
+        content=body,
+        **context
+    )
+
+
+# ============================================================
+# HOME
+# ============================================================
+
+@app.route("/")
+def home():
+
+    faculties = get_faculties()
+
+    faculty = request.args.get(
+        "faculty",
+        faculties[0]
+        if faculties
+        else ""
+    )
+
+    years = get_years(
+        faculty
+    )
+
+    year = request.args.get(
+        "year",
+        years[0]
+        if years
+        else ""
+    )
+
+    today = now_ist().strftime(
+        "%A"
+    )
+
+    current = get_current_lectures(
+        faculty,
+        year
+    )
+
+    next_lectures = get_next_lectures(
+        faculty,
+        year
+    )
+
+    current_time = now_ist().strftime(
+        "%d-%m-%Y %I:%M:%S %p"
+    )
+
+    content = """
+
+<meta
+http-equiv="refresh"
+content="60"
+>
+
+<div class="hero">
+
+<h1>
+🎓 SGB College Management
+</h1>
+
+<p>
+Smart timetable, attendance and reports
+</p>
+
+<div class="current-time">
+India Time: {{ current_time }}
+</div>
+
+</div>
+
+
+<form class="filters">
+
+<div class="filter-grid">
+
+<div>
+
+<label>Faculty</label>
+
+<select
+name="faculty"
+onchange="this.form.submit()"
+>
+
+{% for f in faculties %}
+
+<option
+value="{{ f }}"
+{% if f == faculty %}
+selected
+{% endif %}
+>
+{{ f }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>Year</label>
+
+<select
+name="year"
+onchange="this.form.submit()"
+>
+
+{% for y in years %}
+
+<option
+value="{{ y }}"
+{% if y == year %}
+selected
+{% endif %}
+>
+{{ y }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+</div>
+
+</form>
+
+
+<div class="cards">
+
+<div class="stat">
+
+<div class="stat-title">
+CURRENT LECTURE
+</div>
+
+<div class="stat-value green">
+
+{% if current %}
+{{ current|length }}
+LIVE
+{% else %}
+—
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-title">
+NEXT LECTURE
+</div>
+
+<div class="stat-value blue">
+
+{% if next_lectures %}
+{{ next_lectures[0][0] }}
+{% else %}
+—
+{% endif %}
+
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-title">
+TODAY
+</div>
+
+<div class="stat-value">
+{{ today }}
+</div>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+🟢 Current Lecture
+</h2>
+
+{% if current %}
+
+{% for slot, subject in current %}
+
+<div class="lecture live">
+
+<div class="time">
+{{ slot }}
+</div>
+
+<div class="subject">
+{{ subject }}
+</div>
+
+<span class="badge badge-live">
+LIVE NOW
+</span>
+
+</div>
+
+{% endfor %}
+
+{% else %}
+
+<div class="empty">
+
+No lecture running right now.
+
+<br><br>
+
+Current India time:
+<strong>
+{{ current_time }}
+</strong>
+
+</div>
+
+{% endif %}
+
+</div>
+
+
+<div class="section">
+
+<h2>
+⏭ Next Lecture
+</h2>
+
+{% if next_lectures %}
+
+{% for slot, subject in next_lectures %}
+
+<div class="lecture next">
+
+<div class="time">
+{{ slot }}
+</div>
+
+<div class="subject">
+{{ subject }}
+</div>
+
+<span class="badge badge-next">
+NEXT
+</span>
+
+</div>
+
+{% endfor %}
+
+{% else %}
+
+<div class="empty">
+No more lectures today.
+</div>
+
+{% endif %}
+
+</div>
+"""
+
+    return render_page(
+        content,
+        faculties=faculties,
+        faculty=faculty,
+        years=years,
+        year=year,
+        today=today,
+        current=current,
+        next_lectures=next_lectures,
+        current_time=current_time
+    )
+
+
+# ============================================================
+# TIMETABLE
+# ============================================================
+
+@app.route("/timetable")
+def timetable_page():
+
+    faculties = get_faculties()
+
+    faculty = request.args.get(
+        "faculty",
+        faculties[0]
+        if faculties
+        else ""
+    )
+
+    years = get_years(
+        faculty
+    )
+
+    year = request.args.get(
+        "year",
+        years[0]
+        if years
+        else ""
+    )
+
+    day = request.args.get(
+        "day",
+        now_ist().strftime("%A")
+    )
+
+    if day not in DAYS:
+
+        day = "Monday"
+
+    data = get_day_data(
+        faculty,
+        year,
+        day
+    )
+
+    content = """
+
+<div class="hero">
+
+<h1>
+📅 Timetable
+</h1>
+
+<p>
+{{ faculty }} • {{ year }} • {{ day }}
+</p>
+
+</div>
+
+
+<form class="filters">
+
+<div class="filter-grid">
+
+<div>
+
+<label>Faculty</label>
+
+<select
+name="faculty"
+onchange="this.form.submit()"
+>
+
+{% for f in faculties %}
+
+<option
+value="{{ f }}"
+{% if f == faculty %}
+selected
+{% endif %}
+>
+{{ f }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>Year</label>
+
+<select
+name="year"
+onchange="this.form.submit()"
+>
+
+{% for y in years %}
+
+<option
+value="{{ y }}"
+{% if y == year %}
+selected
+{% endif %}
+>
+{{ y }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>Day</label>
+
+<select
+name="day"
+onchange="this.form.submit()"
+>
+
+{% for d in days %}
+
+<option
+value="{{ d }}"
+{% if d == day %}
+selected
+{% endif %}
+>
+{{ d }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+</div>
+
+</form>
+
+
+<div class="section">
+
+<h2>
+{{ day }} Schedule
+</h2>
+
+
+{% if data %}
+
+{% for slot, value in data.items() %}
+
+{% set lectures = get_lecture_list(value) %}
+
+{% for subject in lectures %}
+
+<div class="lecture
+{% if is_current_slot(slot, day) %}
+live
+{% endif %}
+">
+
+<div class="time">
+
+{{ slot }}
+
+{% if is_current_slot(slot, day) %}
+
+<br>
+
+<span class="badge badge-live">
+LIVE
+</span>
+
+{% endif %}
+
+</div>
+
+
+<div class="subject">
+{{ subject }}
+</div>
+
+
+</div>
+
+{% endfor %}
+
+{% endfor %}
+
+
+{% else %}
+
+<div class="empty">
+
+📚
+
+<br><br>
+
+No timetable available.
+
+</div>
+
+{% endif %}
+
+</div>
+"""
+
+    return render_page(
+        content,
+        faculties=faculties,
+        faculty=faculty,
+        years=years,
+        year=year,
+        day=day,
+        days=DAYS,
+        data=data,
+        lecture_text=lecture_text,
+        get_lecture_list=get_lecture_list,
+        today_date=today_ist(),
+        is_current_slot=is_current_slot
+    )
+
+
+# ============================================================
+# LOGIN
+# ============================================================
+
+@app.route(
+    "/login",
+    methods=["GET", "POST"]
+)
+def login():
+
+    if request.method == "POST":
+
+        username = request.form.get(
+            "username",
+            ""
+        ).strip()
+
+        password = request.form.get(
+            "password",
+            ""
+        )
+
+        user = User.query.filter_by(
+            username=username
+        ).first()
+
+        if user and check_password_hash(
+            user.password_hash,
+            password
+        ):
+
+            session.clear()
+
+            session["user_id"] = user.id
+
+            session["username"] = user.username
+
+            session["is_admin"] = (
+                user.username
+                == ADMIN_USERNAME
+            )
+
+            next_url = request.args.get(
+                "next"
+            )
+
+            if next_url:
+
+                return redirect(
+                    next_url
+                )
+
+            if user.attendance_access:
+
+                return redirect(
+                    url_for(
+                        "attendance"
+                    )
+                )
+
+            return redirect(
+                url_for(
+                    "home"
+                )
+            )
+
+        flash(
+            "Invalid username or password."
+        )
+
+    content = """
+
+<div class="login-box">
+
+<h1>
+🔐 Login
+</h1>
+
+<p>
+Only authorised users can mark attendance.
+</p>
+
+<form method="post">
+
+<label>
+Username
+</label>
+
+<input
+name="username"
+required
+placeholder="Username"
+>
+
+<br><br>
+
+<label>
+Password
+</label>
+
+<input
+type="password"
+name="password"
+required
+placeholder="Password"
+>
+
+<br><br>
+
+<button
+class="btn btn-blue"
+type="submit"
+>
+Login
+</button>
+
+</form>
+
+<br>
+
+<p style="font-size:12px;color:#667085;">
+
+Students, teachers and other visitors can view
+the timetable and reports without login.
+
+</p>
+
+</div>
+"""
+
+    return render_page(
+        content
+    )
+
+
+# ============================================================
+# LOGOUT
+# ============================================================
+
+@app.route("/logout")
+def logout():
+
+    session.clear()
+
+    return redirect(
+        url_for(
+            "home"
+        )
+    )
+
+
+# ============================================================
+# ATTENDANCE
+# ============================================================
+
+@app.route("/attendance")
+@attendance_access_required
+def attendance():
+
+    faculties = get_faculties()
+
+    faculty = request.args.get(
+        "faculty",
+        faculties[0]
+        if faculties
+        else ""
+    )
+
+    years = get_years(
+        faculty
+    )
+
+    year = request.args.get(
+        "year",
+        years[0]
+        if years
+        else ""
+    )
+
+    day = request.args.get(
+        "day",
+        now_ist().strftime("%A")
+    )
+
+    if day not in DAYS:
+
+        day = "Monday"
+
+    data = get_day_data(
+        faculty,
+        year,
+        day
+    )
+
+    content = """
+
+<div class="hero">
+
+<h1>
+📝 Attendance
+</h1>
+
+<p>
+Logged in as {{ session.get("username") }}
+</p>
+
+</div>
+
+
+<form class="filters">
+
+<div class="filter-grid">
+
+<div>
+
+<label>
+Faculty
+</label>
+
+<select
+name="faculty"
+onchange="this.form.submit()"
+>
+
+{% for f in faculties %}
+
+<option
+value="{{ f }}"
+{% if f == faculty %}
+selected
+{% endif %}
+>
+{{ f }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Year
+</label>
+
+<select
+name="year"
+onchange="this.form.submit()"
+>
+
+{% for y in years %}
+
+<option
+value="{{ y }}"
+{% if y == year %}
+selected
+{% endif %}
+>
+{{ y }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Day
+</label>
+
+<select
+name="day"
+onchange="this.form.submit()"
+>
+
+{% for d in days %}
+
+<option
+value="{{ d }}"
+{% if d == day %}
+selected
+{% endif %}
+>
+{{ d }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+</div>
+
+</form>
+
+
+<div class="section">
+
+<h2>
+{{ day }} Attendance
+</h2>
+
+
+{% if data %}
+
+{% for slot, value in data.items() %}
+
+{% set lectures = get_lecture_list(value) %}
+
+
+{% for subject in lectures %}
+
+{% set status = get_status(
+today_date,
+faculty,
+year,
+day,
+slot,
+subject
+) %}
+
+
+<div class="lecture">
+
+<div class="time">
+{{ slot }}
+</div>
+
+
+<div class="subject">
+
+{{ subject }}
+
+<br>
+
+{% if status == "taken" %}
+
+<span class="badge badge-taken">
+✓ TAKEN
+</span>
+
+{% elif status == "not_taken" %}
+
+<span class="badge badge-not">
+✕ NOT TAKEN
+</span>
+
+{% elif status == "cancelled" %}
+
+<span class="badge badge-cancel">
+CANCELLED
+</span>
+
+{% else %}
+
+<span
+style="
+font-size:11px;
+color:#94a3b8;
+"
+>
+Not marked yet
+</span>
+
+{% endif %}
+
+</div>
+
+
+<div class="attendance-buttons">
+
+<form
+method="post"
+action="{{ url_for('mark_attendance') }}"
+class="attendance-form"
+>
+
+<input
+type="hidden"
+name="faculty"
+value="{{ faculty }}"
+>
+
+<input
+type="hidden"
+name="year"
+value="{{ year }}"
+>
+
+<input
+type="hidden"
+name="day"
+value="{{ day }}"
+>
+
+<input
+type="hidden"
+name="slot"
+value="{{ slot }}"
+>
+
+<input
+type="hidden"
+name="subject"
+value="{{ subject }}"
+>
+
+
+<button
+name="status"
+value="taken"
+class="btn btn-green"
+>
+✓ Taken
+</button>
+
+
+<button
+name="status"
+value="not_taken"
+class="btn btn-red"
+>
+✕ Not Taken
+</button>
+
+
+<button
+name="status"
+value="cancelled"
+class="btn btn-orange"
+>
+Cancel
+</button>
+
+
+<button
+name="status"
+value="clear"
+class="btn btn-gray"
+>
+Undo
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+
+{% endfor %}
+
+{% endfor %}
+
+
+{% else %}
+
+<div class="empty">
+No classes scheduled.
+</div>
+
+{% endif %}
+
+</div>
+"""
+
+    return render_page(
+        content,
+        faculties=faculties,
+        faculty=faculty,
+        years=years,
+        year=year,
+        day=day,
+        days=DAYS,
+        data=data,
+        lecture_text=lecture_text,
+        get_lecture_list=get_lecture_list,
+        get_status=get_status,
+        today_date=today_ist()
+    )
+
+
+# ============================================================
+# MARK ATTENDANCE
+# ============================================================
+
+@app.route(
+    "/attendance/mark",
+    methods=["POST"]
+)
+@attendance_access_required
+def mark_attendance():
+
+    faculty = request.form.get(
+        "faculty",
+        ""
+    ).strip()
+
+    year = request.form.get(
+        "year",
+        ""
+    ).strip()
+
+    day = request.form.get(
+        "day",
+        ""
+    ).strip()
+
+    slot = request.form.get(
+        "slot",
+        ""
+    ).strip()
+
+    subject = request.form.get(
+        "subject",
+        ""
+    ).strip()
+
+    status = request.form.get(
+        "status",
+        ""
+    ).strip()
+
+    user = current_user()
+
+
+    # --------------------------------------------------------
+    # BASIC VALIDATION
+    # --------------------------------------------------------
+
+    if not faculty or not year or not day:
+
+        flash(
+            "Invalid attendance information."
+        )
+
+        return redirect(
+            url_for(
+                "attendance"
+            )
+        )
+
+
+    if not slot or not subject:
+
+        flash(
+            "Lecture and time slot are required."
+        )
+
+        return redirect(
+            url_for(
+                "attendance",
+                faculty=faculty,
+                year=year,
+                day=day
+            )
+        )
+
+
+    # --------------------------------------------------------
+    # CLEAR / UNDO
+    # --------------------------------------------------------
+
+    if status == "clear":
+
+        record = Attendance.query.filter_by(
+
+            record_date=today_ist(),
+
+            faculty=faculty,
+
+            year=year,
+
+            day=day,
+
+            slot=slot,
+
+            subject=subject
+
+        ).first()
+
+
+        if record:
+
+            db.session.delete(
+                record
+            )
+
+            db.session.commit()
+
+            flash(
+                f"Attendance record removed for {subject}."
+            )
+
+        else:
+
+            flash(
+                f"No attendance record found for {subject}."
+            )
+
+
+    # --------------------------------------------------------
+    # MARK ATTENDANCE
+    # --------------------------------------------------------
+
+    elif status in [
+        "taken",
+        "not_taken",
+        "cancelled"
+    ]:
+
+        record = Attendance.query.filter_by(
+
+            record_date=today_ist(),
+
+            faculty=faculty,
+
+            year=year,
+
+            day=day,
+
+            slot=slot,
+
+            subject=subject
+
+        ).first()
+
+
+        # ----------------------------------------------------
+        # UPDATE EXISTING RECORD
+        # ----------------------------------------------------
+
+        if record:
+
+            record.subject = subject
+
+            record.status = status
+
+            record.marked_by = (
+                user.name
+                if user
+                else None
+            )
+
+            record.marked_at = (
+                now_ist_naive()
+            )
+
+
+        # ----------------------------------------------------
+        # CREATE NEW RECORD
+        # ----------------------------------------------------
+
+        else:
+
+            record = Attendance(
+
+                record_date=today_ist(),
+
+                faculty=faculty,
+
+                year=year,
+
+                day=day,
+
+                slot=slot,
+
+                subject=subject,
+
+                status=status,
+
+                marked_by=(
+                    user.name
+                    if user
+                    else None
+                ),
+
+                marked_at=now_ist_naive()
+
+            )
+
+            db.session.add(
+                record
+            )
+
+
+        db.session.commit()
+
+
+        flash(
+            f"{subject} marked as "
+            + status
+            .replace(
+                "_",
+                " "
+            )
+            .upper()
+            + "."
+        )
+
+
+    else:
+
+        flash(
+            "Invalid attendance status."
+        )
+
+
+    return redirect(
+        url_for(
+            "attendance",
+            faculty=faculty,
+            year=year,
+            day=day
+        )
+    )
+
+
+# ============================================================
+# ACCESS CONTROL
+# ============================================================
+
+@app.route(
+    "/access",
+    methods=["GET", "POST"]
+)
+@admin_required
+def access_control():
+
+    if request.method == "POST":
+
+        action = request.form.get(
+            "action"
+        )
+
+
+        # ----------------------------------------------------
+        # CREATE USER
+        # ----------------------------------------------------
+
+        if action == "create":
+
+            name = request.form.get(
+                "name",
+                ""
+            ).strip()
+
+            username = request.form.get(
+                "username",
+                ""
+            ).strip()
+
+            password = request.form.get(
+                "password",
+                ""
+            )
+
+            access = (
+                request.form.get(
+                    "attendance_access"
+                ) == "on"
+            )
+
+
+            if (
+                not name
+                or not username
+                or not password
+            ):
+
+                flash(
+                    "Please fill all required fields."
+                )
+
+
+            elif User.query.filter_by(
+                username=username
+            ).first():
+
+                flash(
+                    "Username already exists."
+                )
+
+
+            else:
+
+                user = User(
+
+                    name=name,
+
+                    username=username,
+
+                    password_hash=generate_password_hash(
+                        password
+                    ),
+
+                    attendance_access=access
+
+                )
+
+                db.session.add(
+                    user
+                )
+
+                db.session.commit()
+
+                flash(
+                    "New person added successfully."
+                )
+
+
+        # ----------------------------------------------------
+        # TOGGLE ACCESS
+        # ----------------------------------------------------
+
+        elif action == "toggle":
+
+            user_id = request.form.get(
+                "user_id"
+            )
+
+            try:
+
+                user = User.query.get(
+                    int(user_id)
+                )
+
+            except Exception:
+
+                user = None
+
+
+            if (
+                user
+                and user.username
+                != ADMIN_USERNAME
+            ):
+
+                user.attendance_access = (
+                    not user.attendance_access
+                )
+
+                db.session.commit()
+
+                flash(
+                    "Attendance access updated."
+                )
+
+
+        # ----------------------------------------------------
+        # DELETE USER
+        # ----------------------------------------------------
+
+        elif action == "delete":
+
+            user_id = request.form.get(
+                "user_id"
+            )
+
+            try:
+
+                user = User.query.get(
+                    int(user_id)
+                )
+
+            except Exception:
+
+                user = None
+
+
+            if (
+                user
+                and user.username
+                != ADMIN_USERNAME
+            ):
+
+                db.session.delete(
+                    user
+                )
+
+                db.session.commit()
+
+                flash(
+                    "Person deleted."
+                )
+
+
+    users = User.query.order_by(
+        User.id.asc()
+    ).all()
+
+
+    content = """
+
+<div class="hero">
+
+<h1>
+👥 Access Control
+</h1>
+
+<p>
+Admin can decide who can mark attendance.
+</p>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+➕ Add Person
+</h2>
+
+
+<form method="post">
+
+<input
+type="hidden"
+name="action"
+value="create"
+>
+
+
+<div class="filter-grid">
+
+
+<div>
+
+<label>
+Person Name
+</label>
+
+<input
+name="name"
+required
+placeholder="Teacher / Staff Name"
+>
+
+</div>
+
+
+<div>
+
+<label>
+Username
+</label>
+
+<input
+name="username"
+required
+placeholder="Username"
+>
+
+</div>
+
+
+<div>
+
+<label>
+Password
+</label>
+
+<input
+type="password"
+name="password"
+required
+placeholder="Password"
+>
+
+</div>
+
+
+<div>
+
+<label>
+☑ Attendance Access
+</label>
+
+<input
+type="checkbox"
+name="attendance_access"
+style="width:auto;"
+checked
+>
+
+<span style="font-size:12px;">
+Allow this person to mark attendance
+</span>
+
+</div>
+
+
+</div>
+
+
+<br>
+
+
+<button
+class="btn btn-blue"
+type="submit"
+>
+➕ Add Person
+</button>
+
+</form>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+👤 People & Access
+</h2>
+
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+Name
+</th>
+
+<th>
+Username
+</th>
+
+<th>
+Attendance Access
+</th>
+
+<th>
+Action
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{% for u in users %}
+
+<tr>
+
+<td>
+<strong>
+{{ u.name }}
+</strong>
+</td>
+
+
+<td>
+{{ u.username }}
+</td>
+
+
+<td>
+
+{% if u.attendance_access %}
+
+<span class="access-on">
+☑ ALLOWED
+</span>
+
+{% else %}
+
+<span class="access-off">
+☐ NOT ALLOWED
+</span>
+
+{% endif %}
+
+</td>
+
+
+<td>
+
+
+{% if u.username == admin_username %}
+
+<span class="badge badge-taken">
+ADMIN
+</span>
+
+
+{% else %}
+
+
+<form
+method="post"
+style="display:inline;"
+>
+
+<input
+type="hidden"
+name="action"
+value="toggle"
+>
+
+<input
+type="hidden"
+name="user_id"
+value="{{ u.id }}"
+>
+
+
+<button
+class="btn btn-blue"
+type="submit"
+>
+☑ Toggle Access
+</button>
+
+</form>
+
+
+<form
+method="post"
+style="display:inline;"
+onsubmit="return confirm('Delete this person?')"
+>
+
+<input
+type="hidden"
+name="action"
+value="delete"
+>
+
+<input
+type="hidden"
+name="user_id"
+value="{{ u.id }}"
+>
+
+
+<button
+class="btn btn-red"
+type="submit"
+>
+Delete
+</button>
+
+</form>
+
+
+{% endif %}
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+
+</tbody>
+
+</table>
+
+</div>
+
+</div>
+"""
+
+    return render_page(
+        content,
+        users=users,
+        admin_username=ADMIN_USERNAME
+    )
+
+
+# ============================================================
+# REPORTS
+# ============================================================
+
+@app.route("/reports")
+def reports():
+
+    faculties = get_faculties()
+
+    faculty = request.args.get(
+        "faculty",
+        faculties[0]
+        if faculties
+        else ""
+    )
+
+    years = get_years(
+        faculty
+    )
+
+    year = request.args.get(
+        "year",
+        years[0]
+        if years
+        else ""
+    )
+
+    period = request.args.get(
+        "period",
+        "month"
+    )
+
+    subject = request.args.get(
+        "subject",
+        ""
+    )
+
+
+    # --------------------------------------------------------
+    # DATE RANGE
+    # --------------------------------------------------------
+
+    if period == "custom":
+
+        try:
+
+            start_date = datetime.strptime(
+                request.args.get(
+                    "start_date"
+                ),
+                "%Y-%m-%d"
+            ).date()
+
+            end_date = datetime.strptime(
+                request.args.get(
+                    "end_date"
+                ),
+                "%Y-%m-%d"
+            ).date()
+
+        except Exception:
+
+            start_date, end_date = (
+                date_range_for_period(
+                    "month"
+                )
+            )
+
+    else:
+
+        start_date, end_date = (
+            date_range_for_period(
+                period
+            )
+        )
+
+
+    # --------------------------------------------------------
+    # RECORDS
+    # --------------------------------------------------------
+
+    records = get_report_records(
+
+        faculty,
+
+        year,
+
+        start_date,
+
+        end_date,
+
+        subject
+        if subject
+        else None
+
+    )
+
+
+    (
+        total,
+        taken,
+        not_taken,
+        cancelled,
+        percentage
+    ) = calculate_stats(
+        records
+    )
+
+
+    # --------------------------------------------------------
+    # SUBJECT LIST
+    # --------------------------------------------------------
+
+    subjects = sorted({
+
+        r.subject
+
+        for r in Attendance.query.filter_by(
+
+            faculty=faculty,
+
+            year=year
+
+        ).all()
+
+    })
+
+
+    subject_stats = subject_statistics(
+        records
+    )
+
+
+    content = """
+
+<div class="hero">
+
+<h1>
+📊 Attendance Reports
+</h1>
+
+<p>
+Daily • Weekly • Monthly • Yearly • Subject-wise
+</p>
+
+</div>
+
+
+<form
+class="filters"
+method="get"
+>
+
+<div class="filter-grid">
+
+
+<div>
+
+<label>
+Faculty
+</label>
+
+<select name="faculty">
+
+{% for f in faculties %}
+
+<option
+value="{{ f }}"
+{% if f == faculty %}
+selected
+{% endif %}
+>
+{{ f }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Year
+</label>
+
+<select name="year">
+
+{% for y in years %}
+
+<option
+value="{{ y }}"
+{% if y == year %}
+selected
+{% endif %}
+>
+{{ y }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Period
+</label>
+
+<select name="period">
+
+<option
+value="today"
+{% if period == "today" %}
+selected
+{% endif %}
+>
+Today
+</option>
+
+<option
+value="week"
+{% if period == "week" %}
+selected
+{% endif %}
+>
+This Week
+</option>
+
+<option
+value="month"
+{% if period == "month" %}
+selected
+{% endif %}
+>
+This Month
+</option>
+
+<option
+value="year"
+{% if period == "year" %}
+selected
+{% endif %}
+>
+This Year
+</option>
+
+<option
+value="custom"
+{% if period == "custom" %}
+selected
+{% endif %}
+>
+Custom
+</option>
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Subject
+</label>
+
+<select name="subject">
+
+<option value="">
+All Subjects
+</option>
+
+
+{% for s in subjects %}
+
+<option
+value="{{ s }}"
+{% if s == subject %}
+selected
+{% endif %}
+>
+{{ s }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div>
+
+<label>
+Start Date
+</label>
+
+<input
+type="date"
+name="start_date"
+value="{{ start_date }}"
+>
+
+</div>
+
+
+<div>
+
+<label>
+End Date
+</label>
+
+<input
+type="date"
+name="end_date"
+value="{{ end_date }}"
+>
+
+</div>
+
+
+<div>
+
+<label>
+&nbsp;
+</label>
+
+<button
+class="btn btn-blue"
+type="submit"
+>
+Generate Report
+</button>
+
+</div>
+
+
+<div>
+
+<label>
+&nbsp;
+</label>
+
+<a
+class="btn btn-green"
+href="{{ url_for(
+'export_csv',
+faculty=faculty,
+year=year,
+period=period,
+subject=subject,
+start_date=start_date,
+end_date=end_date
+) }}"
+>
+⬇ CSV
+</a>
+
+</div>
+
+
+</div>
+
+</form>
+
+
+<div class="cards">
+
+
+<div class="stat">
+
+<div class="stat-title">
+RECORDED
+</div>
+
+<div class="stat-value blue">
+{{ total }}
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-title">
+TAKEN
+</div>
+
+<div class="stat-value green">
+{{ taken }}
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-title">
+NOT TAKEN
+</div>
+
+<div class="stat-value red">
+{{ not_taken }}
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-title">
+CANCELLED
+</div>
+
+<div class="stat-value orange">
+{{ cancelled }}
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div class="stat-title">
+COMPLETION
+</div>
+
+<div class="stat-value green">
+{{ "%.1f"|format(percentage) }}%
+</div>
+
+</div>
+
+</div>
+
+
+<div class="section">
+
+<h2>
+📚 Subject-wise Report
+</h2>
+
+
+{% if subject_stats %}
+
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+Subject
+</th>
+
+<th>
+Total
+</th>
+
+<th>
+Taken
+</th>
+
+<th>
+Not Taken
+</th>
+
+<th>
+Cancelled
+</th>
+
+<th>
+Percentage
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{% for name, data in subject_stats.items() %}
+
+<tr>
+
+<td>
+<strong>
+{{ name }}
+</strong>
+</td>
+
+<td>
+{{ data.total }}
+</td>
+
+<td class="green">
+{{ data.taken }}
+</td>
+
+<td class="red">
+{{ data.not_taken }}
+</td>
+
+<td class="orange">
+{{ data.cancelled }}
+</td>
+
+<td>
+
+{{ "%.1f"|format(data.percentage) }}%
+
+<div class="progress">
+
+<div
+class="progress-bar"
+style="width:{{ data.percentage }}%"
+></div>
+
+</div>
+
+</td>
+
+</tr>
+
+{% endfor %}
+
+
+</tbody>
+
+</table>
+
+</div>
+
+
+{% else %}
+
+<div class="empty">
+No attendance records found.
+</div>
+
+{% endif %}
+
+</div>
+
+
+<div class="section">
+
+<h2>
+📝 Detailed Records
+</h2>
+
+
+{% if records %}
+
+
+<div class="table-wrap">
+
+<table>
+
+<thead>
+
+<tr>
+
+<th>
+Date
+</th>
+
+<th>
+Day
+</th>
+
+<th>
+Time
+</th>
+
+<th>
+Subject
+</th>
+
+<th>
+Status
+</th>
+
+<th>
+Marked By
+</th>
+
+</tr>
+
+</thead>
+
+
+<tbody>
+
+
+{% for r in records %}
+
+<tr>
+
+<td>
+{{ r.record_date.strftime("%d-%m-%Y") }}
+</td>
+
+<td>
+{{ r.day }}
+</td>
+
+<td>
+{{ r.slot }}
+</td>
+
+<td>
+{{ r.subject }}
+</td>
+
+<td>
+
+
+{% if r.status == "taken" %}
+
+<span class="badge badge-taken">
+✓ TAKEN
+</span>
+
+
+{% elif r.status == "not_taken" %}
+
+<span class="badge badge-not">
+✕ NOT TAKEN
+</span>
+
+
+{% else %}
+
+<span class="badge badge-cancel">
+CANCELLED
+</span>
+
+{% endif %}
+
+
+</td>
+
+<td>
+{{ r.marked_by or "-" }}
+</td>
+
+</tr>
+
+{% endfor %}
+
+
+</tbody>
+
+</table>
+
+</div>
+
+
+{% else %}
+
+<div class="empty">
+No records found.
+</div>
+
+{% endif %}
+
+</div>
+"""
+
+    return render_page(
+
+        content,
+
+        faculties=faculties,
+
+        faculty=faculty,
+
+        years=years,
+
+        year=year,
+
+        period=period,
+
+        subject=subject,
+
+        subjects=subjects,
+
+        start_date=start_date,
+
+        end_date=end_date,
+
+        total=total,
+
+        taken=taken,
+
+        not_taken=not_taken,
+
+        cancelled=cancelled,
+
+        percentage=percentage,
+
+        subject_stats=subject_stats,
+
+        records=records
+
+    )
+
+
+# ============================================================
+# CSV EXPORT
+# ============================================================
+
+@app.route(
+    "/reports/export.csv"
+)
+def export_csv():
+
+    faculties = get_faculties()
+
+    faculty = request.args.get(
+        "faculty",
+        faculties[0]
+        if faculties
+        else ""
+    )
+
+    years = get_years(
+        faculty
+    )
+
+    year = request.args.get(
+        "year",
+        years[0]
+        if years
+        else ""
+    )
+
+    period = request.args.get(
+        "period",
+        "month"
+    )
+
+    subject = request.args.get(
+        "subject",
+        ""
+    )
+
+
+    # --------------------------------------------------------
+    # DATE RANGE
+    # --------------------------------------------------------
+
+    if period == "custom":
+
+        try:
+
+            start_date = datetime.strptime(
+                request.args.get(
+                    "start_date"
+                ),
+                "%Y-%m-%d"
+            ).date()
+
+            end_date = datetime.strptime(
+                request.args.get(
+                    "end_date"
+                ),
+                "%Y-%m-%d"
+            ).date()
+
+        except Exception:
+
+            start_date, end_date = (
+                date_range_for_period(
+                    "month"
+                )
+            )
+
+    else:
+
+        start_date, end_date = (
+            date_range_for_period(
+                period
+            )
+        )
+
+
+    records = get_report_records(
+
+        faculty,
+
+        year,
+
+        start_date,
+
+        end_date,
+
+        subject
+        if subject
+        else None
+
+    )
+
+
+    output = io.StringIO()
+
+    writer = csv.writer(
+        output
+    )
+
+
+    writer.writerow([
+        "Date",
+        "Faculty",
+        "Year",
+        "Day",
+        "Time",
+        "Subject",
+        "Status",
+        "Marked By",
+        "Marked At"
+    ])
+
+
+    for r in records:
+
+        writer.writerow([
+
+            r.record_date.strftime(
+                "%Y-%m-%d"
+            ),
+
+            r.faculty,
+
+            r.year,
+
+            r.day,
+
+            r.slot,
+
+            r.subject,
+
+            r.status,
+
+            r.marked_by or "",
+
+            r.marked_at.strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
+            if r.marked_at
+            else ""
+
+        ])
+
+
+    filename = (
+        "SGB_Attendance_"
+        f"{start_date}_"
+        f"{end_date}.csv"
+    )
+
+
+    return Response(
+
+        output.getvalue(),
+
+        mimetype="text/csv",
+
+        headers={
+            "Content-Disposition":
+            f"attachment; filename={filename}"
+        }
+
+    )
+
+
+# ============================================================
+# HEALTH CHECK
+# ============================================================
+
+@app.route("/health")
+def health():
+
+    return {
+        "status": "ok",
+        "application":
+            "SGB College Management System",
+        "timezone":
+            "Asia/Kolkata",
+        "current_time":
+            now_ist().isoformat()
+    }
+
+
+# ============================================================
+# 404
+# ============================================================
+
+@app.errorhandler(404)
+def not_found(error):
+
+    content = """
+
+<div class="empty">
+
+<h1>
+404
+</h1>
+
+<p>
+Page not found.
+</p>
+
+<a
+href="{{ url_for('home') }}"
+class="btn btn-blue"
+>
+Go Home
+</a>
+
+</div>
+"""
+
+    return render_page(
+        content
+    ), 404
+
+
+# ============================================================
+# ERROR HANDLER
+# ============================================================
+
+@app.errorhandler(500)
+def server_error(error):
+
+    db.session.rollback()
+
+    content = """
+
+<div class="empty">
+
+<h1>
+500
+</h1>
+
+<p>
+Something went wrong on the server.
+</p>
+
+<a
+href="{{ url_for('home') }}"
+class="btn btn-blue"
+>
+Go Home
+</a>
+
+</div>
+"""
+
+    return render_page(
+        content
+    ), 500
+
+
+# ============================================================
+# RUN
+# ============================================================
+
+if __name__ == "__main__":
+
+    print()
+    print("=" * 60)
+    print(
+        "SGB COLLEGE MANAGEMENT SYSTEM"
+    )
+    print("=" * 60)
+    print()
+
+    print("Timezone:")
+    print("Asia/Kolkata")
+    print()
+
+    print("Current India Time:")
+    print(
+        now_ist().strftime(
+            "%d-%m-%Y %I:%M:%S %p"
+        )
+    )
+    print()
+
+    print("Computer:")
+    print(
+        "http://127.0.0.1:5000"
+    )
+    print()
+
+    print("Phone / Same Wi-Fi:")
+    print(
+        "http://192.168.1.16:5000"
+    )
+    print()
+
+    print("Public deployment:")
+    print(
+        "Deploy this application to a cloud server."
+    )
+    print()
+
+    print("Admin username:")
+    print(
+        ADMIN_USERNAME
+    )
+    print()
+
+    print("Default admin password:")
+    print(
+        ADMIN_PASSWORD
+    )
+    print()
+
+    print("=" * 60)
+
+    app.run(
+
+        host="0.0.0.0",
+
+        port=int(
+            os.environ.get(
+                "PORT",
+                5000
+            )
+        ),
+
+        debug=False
+
+    )
