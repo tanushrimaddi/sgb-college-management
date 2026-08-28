@@ -2,7 +2,9 @@ import os
 import json
 import csv
 import io
+
 from datetime import datetime, date, timedelta
+from zoneinfo import ZoneInfo
 from functools import wraps
 
 from flask import (
@@ -17,6 +19,7 @@ from flask import (
 )
 
 from flask_sqlalchemy import SQLAlchemy
+
 from werkzeug.security import (
     check_password_hash,
     generate_password_hash
@@ -47,6 +50,7 @@ DATABASE_URL = os.environ.get(
 )
 
 if DATABASE_URL.startswith("postgres://"):
+
     DATABASE_URL = DATABASE_URL.replace(
         "postgres://",
         "postgresql://",
@@ -54,9 +58,41 @@ if DATABASE_URL.startswith("postgres://"):
     )
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
+
+
+# ============================================================
+# INDIA TIMEZONE
+# ============================================================
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def now_ist():
+
+    return datetime.now(IST)
+
+
+def today_ist():
+
+    return now_ist().date()
+
+
+def now_ist_naive():
+
+    """
+    Database-friendly IST datetime.
+
+    Keeps the actual India local time but removes timezone
+    information before storing it in DateTime columns.
+    """
+
+    return now_ist().replace(
+        tzinfo=None
+    )
 
 
 # ============================================================
@@ -101,6 +137,7 @@ TIMETABLE_FILE = os.path.join(
 def load_timetable():
 
     if not os.path.exists(TIMETABLE_FILE):
+
         return {}
 
     try:
@@ -115,7 +152,10 @@ def load_timetable():
 
     except Exception as e:
 
-        print("Timetable error:", e)
+        print(
+            "Timetable error:",
+            e
+        )
 
         return {}
 
@@ -158,7 +198,7 @@ class User(db.Model):
 
     created_at = db.Column(
         db.DateTime,
-        default=datetime.now
+        default=now_ist_naive
     )
 
 
@@ -215,7 +255,7 @@ class Attendance(db.Model):
 
     marked_at = db.Column(
         db.DateTime,
-        default=datetime.now
+        default=now_ist_naive
     )
 
 
@@ -227,7 +267,6 @@ with app.app_context():
 
     db.create_all()
 
-    # Create default admin if it doesn't exist
     admin_user = User.query.filter_by(
         username=ADMIN_USERNAME
     ).first()
@@ -243,7 +282,10 @@ with app.app_context():
             attendance_access=True
         )
 
-        db.session.add(admin_user)
+        db.session.add(
+            admin_user
+        )
+
         db.session.commit()
 
 
@@ -258,6 +300,7 @@ def current_user():
     )
 
     if not user_id:
+
         return None
 
     return User.query.get(
@@ -270,7 +313,9 @@ def login_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
 
-        if not session.get("user_id"):
+        if not session.get(
+            "user_id"
+        ):
 
             return redirect(
                 url_for(
@@ -370,7 +415,10 @@ def get_years(faculty):
 
     return list(
         timetable
-        .get(faculty, {})
+        .get(
+            faculty,
+            {}
+        )
         .keys()
     )
 
@@ -383,19 +431,43 @@ def get_day_data(
 
     return (
         timetable
-        .get(faculty, {})
-        .get(year, {})
-        .get(day, {})
+        .get(
+            faculty,
+            {}
+        )
+        .get(
+            year,
+            {}
+        )
+        .get(
+            day,
+            {}
+        )
     )
 
 
+# ============================================================
+# LECTURE HELPERS
+# ============================================================
+
 def lecture_text(value):
 
-    if isinstance(value, str):
+    """
+    Converts a single timetable lecture value
+    into readable text.
+    """
+
+    if isinstance(
+        value,
+        str
+    ):
 
         return value
 
-    if isinstance(value, dict):
+    if isinstance(
+        value,
+        dict
+    ):
 
         for key in [
             "class",
@@ -413,6 +485,127 @@ def lecture_text(value):
     return str(value)
 
 
+def get_lecture_list(value):
+
+    """
+    Converts timetable data into a list of
+    individual lectures.
+
+    Supports:
+
+        "Physics"
+
+    and:
+
+        [
+            "Physics",
+            "Chemistry",
+            "Biology"
+        ]
+
+    and:
+
+        {
+            "lectures": [
+                "Physics",
+                "Chemistry"
+            ]
+        }
+    """
+
+    if isinstance(
+        value,
+        list
+    ):
+
+        result = []
+
+        for item in value:
+
+            text = lecture_text(
+                item
+            ).strip()
+
+            if text:
+
+                result.append(
+                    text
+                )
+
+        return result
+
+    if isinstance(
+        value,
+        tuple
+    ):
+
+        result = []
+
+        for item in value:
+
+            text = lecture_text(
+                item
+            ).strip()
+
+            if text:
+
+                result.append(
+                    text
+                )
+
+        return result
+
+    if isinstance(
+        value,
+        dict
+    ):
+
+        for key in [
+            "lectures",
+            "subjects",
+            "classes"
+        ]:
+
+            if key in value:
+
+                items = value[key]
+
+                if isinstance(
+                    items,
+                    list
+                ):
+
+                    result = []
+
+                    for item in items:
+
+                        text = lecture_text(
+                            item
+                        ).strip()
+
+                        if text:
+
+                            result.append(
+                                text
+                            )
+
+                    return result
+
+    text = lecture_text(
+        value
+    ).strip()
+
+    if text:
+
+        return [text]
+
+    return []
+
+
+# ============================================================
+# TIME HELPERS
+# ============================================================
+
 def parse_time(value):
 
     try:
@@ -424,7 +617,10 @@ def parse_time(value):
             value.split(":")[:2]
         )
 
-        return hour * 60 + minute
+        return (
+            hour * 60
+            + minute
+        )
 
     except Exception:
 
@@ -435,7 +631,10 @@ def parse_slot(slot):
 
     try:
 
-        start, end = slot.split("-")
+        start, end = slot.split(
+            "-",
+            1
+        )
 
         return (
             parse_time(start),
@@ -449,7 +648,7 @@ def parse_slot(slot):
 
 def current_minutes():
 
-    now = datetime.now()
+    now = now_ist()
 
     return (
         now.hour * 60
@@ -462,29 +661,39 @@ def is_current_slot(
     day
 ):
 
-    today = datetime.now().strftime(
+    today = now_ist().strftime(
         "%A"
     )
 
     if day != today:
+
         return False
 
-    start, end = parse_slot(slot)
+    start, end = parse_slot(
+        slot
+    )
 
     if start is None or end is None:
+
         return False
 
     now = current_minutes()
 
-    return start <= now < end
+    return (
+        start <= now < end
+    )
 
+
+# ============================================================
+# CURRENT LECTURES
+# ============================================================
 
 def get_current_lectures(
     faculty,
     year
 ):
 
-    today = datetime.now().strftime(
+    today = now_ist().strftime(
         "%A"
     )
 
@@ -500,29 +709,42 @@ def get_current_lectures(
 
     for slot, value in data.items():
 
-        start, end = parse_slot(slot)
+        start, end = parse_slot(
+            slot
+        )
 
         if start is None or end is None:
+
             continue
 
         if start <= now < end:
 
-            result.append(
-                (
-                    slot,
-                    lecture_text(value)
-                )
+            lectures = get_lecture_list(
+                value
             )
+
+            for subject in lectures:
+
+                result.append(
+                    (
+                        slot,
+                        subject
+                    )
+                )
 
     return result
 
+
+# ============================================================
+# NEXT LECTURES
+# ============================================================
 
 def get_next_lectures(
     faculty,
     year
 ):
 
-    today = datetime.now().strftime(
+    today = now_ist().strftime(
         "%A"
     )
 
@@ -538,52 +760,85 @@ def get_next_lectures(
 
     for slot, value in data.items():
 
-        start, end = parse_slot(slot)
+        start, end = parse_slot(
+            slot
+        )
 
         if start is None:
+
             continue
 
         if start > now:
 
-            upcoming.append(
-                (
-                    start,
-                    slot,
-                    lecture_text(value)
-                )
+            lectures = get_lecture_list(
+                value
             )
+
+            for subject in lectures:
+
+                upcoming.append(
+                    (
+                        start,
+                        slot,
+                        subject
+                    )
+                )
 
     upcoming.sort(
         key=lambda x: x[0]
     )
 
     if not upcoming:
+
         return []
 
     first = upcoming[0][0]
 
     return [
-        (slot, subject)
+        (
+            slot,
+            subject
+        )
         for start, slot, subject
         in upcoming
         if start == first
     ]
 
 
+# ============================================================
+# ATTENDANCE STATUS
+# ============================================================
+
 def get_status(
     record_date,
     faculty,
     year,
     day,
-    slot
+    slot,
+    subject
 ):
+
+    """
+    IMPORTANT:
+
+    Subject is now part of the lookup.
+
+    This allows:
+
+        Chemistry 10:00-11:00 -> Taken
+
+        Physics 10:00-11:00 -> Not Taken
+
+    to exist as two separate records.
+    """
 
     record = Attendance.query.filter_by(
         record_date=record_date,
         faculty=faculty,
         year=year,
         day=day,
-        slot=slot
+        slot=slot,
+        subject=subject
     ).first()
 
     if record:
@@ -597,23 +852,33 @@ def get_status(
 # REPORT HELPERS
 # ============================================================
 
-def date_range_for_period(period):
+def date_range_for_period(
+    period
+):
 
-    today = date.today()
+    today = today_ist()
 
     if period == "today":
 
-        return today, today
+        return (
+            today,
+            today
+        )
 
     if period == "week":
 
-        start = today - timedelta(
-            days=today.weekday()
+        start = (
+            today
+            - timedelta(
+                days=today.weekday()
+            )
         )
 
         return (
             start,
-            start + timedelta(days=6)
+            start + timedelta(
+                days=6
+            )
         )
 
     if period == "month":
@@ -639,7 +904,9 @@ def date_range_for_period(period):
 
         return (
             start,
-            next_month - timedelta(days=1)
+            next_month - timedelta(
+                days=1
+            )
         )
 
     if period == "year":
@@ -655,7 +922,10 @@ def date_range_for_period(period):
             )
         )
 
-    return today, today
+    return (
+        today,
+        today
+    )
 
 
 def get_report_records(
@@ -691,26 +961,32 @@ def get_report_records(
 
     return query.order_by(
         Attendance.record_date.desc(),
-        Attendance.slot.asc()
+        Attendance.slot.asc(),
+        Attendance.subject.asc()
     ).all()
 
 
-def calculate_stats(records):
+def calculate_stats(
+    records
+):
 
     total = len(records)
 
     taken = sum(
-        1 for r in records
+        1
+        for r in records
         if r.status == "taken"
     )
 
     not_taken = sum(
-        1 for r in records
+        1
+        for r in records
         if r.status == "not_taken"
     )
 
     cancelled = sum(
-        1 for r in records
+        1
+        for r in records
         if r.status == "cancelled"
     )
 
@@ -729,7 +1005,9 @@ def calculate_stats(records):
     )
 
 
-def subject_statistics(records):
+def subject_statistics(
+    records
+):
 
     result = {}
 
@@ -1067,6 +1345,13 @@ button,
     display: flex;
     gap: 5px;
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.attendance-form {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
 }
 
 .table-wrap {
@@ -1143,6 +1428,12 @@ th {
     font-weight: bold;
 }
 
+.current-time {
+    font-size: 12px;
+    color: #64748b;
+    margin-top: 5px;
+}
+
 @media(max-width:700px) {
 
     .navbar {
@@ -1181,10 +1472,15 @@ th {
         width: 100%;
     }
 
-    .attendance-buttons .btn {
+    .attendance-form {
+        width: 100%;
+    }
+
+    .attendance-form .btn {
         flex: 1;
         text-align: center;
     }
+
 }
 
 </style>
@@ -1206,7 +1502,9 @@ th {
 
 <div class="nav-links">
 
-<a href="{{ url_for('home') }}">🏠 Home</a>
+<a href="{{ url_for('home') }}">
+🏠 Home
+</a>
 
 <a href="{{ url_for('timetable_page') }}">
 📅 Timetable
@@ -1284,7 +1582,10 @@ Timetable • Attendance • Reports
 """
 
 
-def render_page(content, **context):
+def render_page(
+    content,
+    **context
+):
 
     body = render_template_string(
         content,
@@ -1309,7 +1610,9 @@ def home():
 
     faculty = request.args.get(
         "faculty",
-        faculties[0] if faculties else ""
+        faculties[0]
+        if faculties
+        else ""
     )
 
     years = get_years(
@@ -1318,10 +1621,12 @@ def home():
 
     year = request.args.get(
         "year",
-        years[0] if years else ""
+        years[0]
+        if years
+        else ""
     )
 
-    today = datetime.now().strftime(
+    today = now_ist().strftime(
         "%A"
     )
 
@@ -1335,17 +1640,33 @@ def home():
         year
     )
 
+    current_time = now_ist().strftime(
+        "%d-%m-%Y %I:%M:%S %p"
+    )
+
     content = """
+
+<meta
+http-equiv="refresh"
+content="60"
+>
 
 <div class="hero">
 
-<h1>🎓 SGB College Management</h1>
+<h1>
+🎓 SGB College Management
+</h1>
 
 <p>
 Smart timetable, attendance and reports
 </p>
 
+<div class="current-time">
+India Time: {{ current_time }}
 </div>
+
+</div>
+
 
 <form class="filters">
 
@@ -1364,7 +1685,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ f }}"
-{% if f == faculty %}selected{% endif %}
+{% if f == faculty %}
+selected
+{% endif %}
 >
 {{ f }}
 </option>
@@ -1374,6 +1697,7 @@ value="{{ f }}"
 </select>
 
 </div>
+
 
 <div>
 
@@ -1388,7 +1712,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ y }}"
-{% if y == year %}selected{% endif %}
+{% if y == year %}
+selected
+{% endif %}
 >
 {{ y }}
 </option>
@@ -1403,6 +1729,7 @@ value="{{ y }}"
 
 </form>
 
+
 <div class="cards">
 
 <div class="stat">
@@ -1414,6 +1741,7 @@ CURRENT LECTURE
 <div class="stat-value green">
 
 {% if current %}
+{{ current|length }}
 LIVE
 {% else %}
 —
@@ -1422,6 +1750,7 @@ LIVE
 </div>
 
 </div>
+
 
 <div class="stat">
 
@@ -1441,6 +1770,7 @@ NEXT LECTURE
 
 </div>
 
+
 <div class="stat">
 
 <div class="stat-title">
@@ -1455,9 +1785,12 @@ TODAY
 
 </div>
 
+
 <div class="section">
 
-<h2>🟢 Current Lecture</h2>
+<h2>
+🟢 Current Lecture
+</h2>
 
 {% if current %}
 
@@ -1484,16 +1817,28 @@ LIVE NOW
 {% else %}
 
 <div class="empty">
+
 No lecture running right now.
+
+<br><br>
+
+Current India time:
+<strong>
+{{ current_time }}
+</strong>
+
 </div>
 
 {% endif %}
 
 </div>
 
+
 <div class="section">
 
-<h2>⏭ Next Lecture</h2>
+<h2>
+⏭ Next Lecture
+</h2>
 
 {% if next_lectures %}
 
@@ -1536,7 +1881,8 @@ No more lectures today.
         year=year,
         today=today,
         current=current,
-        next_lectures=next_lectures
+        next_lectures=next_lectures,
+        current_time=current_time
     )
 
 
@@ -1551,7 +1897,9 @@ def timetable_page():
 
     faculty = request.args.get(
         "faculty",
-        faculties[0] if faculties else ""
+        faculties[0]
+        if faculties
+        else ""
     )
 
     years = get_years(
@@ -1560,15 +1908,18 @@ def timetable_page():
 
     year = request.args.get(
         "year",
-        years[0] if years else ""
+        years[0]
+        if years
+        else ""
     )
 
     day = request.args.get(
         "day",
-        datetime.now().strftime("%A")
+        now_ist().strftime("%A")
     )
 
     if day not in DAYS:
+
         day = "Monday"
 
     data = get_day_data(
@@ -1581,13 +1932,16 @@ def timetable_page():
 
 <div class="hero">
 
-<h1>📅 Timetable</h1>
+<h1>
+📅 Timetable
+</h1>
 
 <p>
 {{ faculty }} • {{ year }} • {{ day }}
 </p>
 
 </div>
+
 
 <form class="filters">
 
@@ -1606,7 +1960,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ f }}"
-{% if f == faculty %}selected{% endif %}
+{% if f == faculty %}
+selected
+{% endif %}
 >
 {{ f }}
 </option>
@@ -1616,6 +1972,7 @@ value="{{ f }}"
 </select>
 
 </div>
+
 
 <div>
 
@@ -1630,7 +1987,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ y }}"
-{% if y == year %}selected{% endif %}
+{% if y == year %}
+selected
+{% endif %}
 >
 {{ y }}
 </option>
@@ -1640,6 +1999,7 @@ value="{{ y }}"
 </select>
 
 </div>
+
 
 <div>
 
@@ -1654,7 +2014,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ d }}"
-{% if d == day %}selected{% endif %}
+{% if d == day %}
+selected
+{% endif %}
 >
 {{ d }}
 </option>
@@ -1669,23 +2031,21 @@ value="{{ d }}"
 
 </form>
 
+
 <div class="section">
 
-<h2>{{ day }} Schedule</h2>
+<h2>
+{{ day }} Schedule
+</h2>
+
 
 {% if data %}
 
 {% for slot, value in data.items() %}
 
-{% set subject = lecture_text(value) %}
+{% set lectures = get_lecture_list(value) %}
 
-{% set status = get_status(
-today_date,
-faculty,
-year,
-day,
-slot
-) %}
+{% for subject in lectures %}
 
 <div class="lecture
 {% if is_current_slot(slot, day) %}
@@ -1709,44 +2069,29 @@ LIVE
 
 </div>
 
+
 <div class="subject">
 {{ subject }}
 </div>
 
-<div>
-
-{% if status == "taken" %}
-
-<span class="badge badge-taken">
-✓ TAKEN
-</span>
-
-{% elif status == "not_taken" %}
-
-<span class="badge badge-not">
-✕ NOT TAKEN
-</span>
-
-{% elif status == "cancelled" %}
-
-<span class="badge badge-cancel">
-CANCELLED
-</span>
-
-{% endif %}
-
-</div>
 
 </div>
 
 {% endfor %}
 
+{% endfor %}
+
+
 {% else %}
 
 <div class="empty">
+
 📚
+
 <br><br>
+
 No timetable available.
+
 </div>
 
 {% endif %}
@@ -1764,8 +2109,8 @@ No timetable available.
         days=DAYS,
         data=data,
         lecture_text=lecture_text,
-        get_status=get_status,
-        today_date=date.today(),
+        get_lecture_list=get_lecture_list,
+        today_date=today_ist(),
         is_current_slot=is_current_slot
     )
 
@@ -1804,9 +2149,12 @@ def login():
             session.clear()
 
             session["user_id"] = user.id
+
             session["username"] = user.username
+
             session["is_admin"] = (
-                user.username == ADMIN_USERNAME
+                user.username
+                == ADMIN_USERNAME
             )
 
             next_url = request.args.get(
@@ -1814,15 +2162,23 @@ def login():
             )
 
             if next_url:
-                return redirect(next_url)
+
+                return redirect(
+                    next_url
+                )
 
             if user.attendance_access:
+
                 return redirect(
-                    url_for("attendance")
+                    url_for(
+                        "attendance"
+                    )
                 )
 
             return redirect(
-                url_for("home")
+                url_for(
+                    "home"
+                )
             )
 
         flash(
@@ -1833,7 +2189,9 @@ def login():
 
 <div class="login-box">
 
-<h1>🔐 Login</h1>
+<h1>
+🔐 Login
+</h1>
 
 <p>
 Only authorised users can mark attendance.
@@ -1841,7 +2199,9 @@ Only authorised users can mark attendance.
 
 <form method="post">
 
-<label>Username</label>
+<label>
+Username
+</label>
 
 <input
 name="username"
@@ -1851,7 +2211,9 @@ placeholder="Username"
 
 <br><br>
 
-<label>Password</label>
+<label>
+Password
+</label>
 
 <input
 type="password"
@@ -1874,8 +2236,10 @@ Login
 <br>
 
 <p style="font-size:12px;color:#667085;">
+
 Students, teachers and other visitors can view
 the timetable and reports without login.
+
 </p>
 
 </div>
@@ -1896,7 +2260,9 @@ def logout():
     session.clear()
 
     return redirect(
-        url_for("home")
+        url_for(
+            "home"
+        )
     )
 
 
@@ -1912,7 +2278,9 @@ def attendance():
 
     faculty = request.args.get(
         "faculty",
-        faculties[0] if faculties else ""
+        faculties[0]
+        if faculties
+        else ""
     )
 
     years = get_years(
@@ -1921,15 +2289,18 @@ def attendance():
 
     year = request.args.get(
         "year",
-        years[0] if years else ""
+        years[0]
+        if years
+        else ""
     )
 
     day = request.args.get(
         "day",
-        datetime.now().strftime("%A")
+        now_ist().strftime("%A")
     )
 
     if day not in DAYS:
+
         day = "Monday"
 
     data = get_day_data(
@@ -1942,7 +2313,9 @@ def attendance():
 
 <div class="hero">
 
-<h1>📝 Attendance</h1>
+<h1>
+📝 Attendance
+</h1>
 
 <p>
 Logged in as {{ session.get("username") }}
@@ -1950,13 +2323,16 @@ Logged in as {{ session.get("username") }}
 
 </div>
 
+
 <form class="filters">
 
 <div class="filter-grid">
 
 <div>
 
-<label>Faculty</label>
+<label>
+Faculty
+</label>
 
 <select
 name="faculty"
@@ -1967,7 +2343,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ f }}"
-{% if f == faculty %}selected{% endif %}
+{% if f == faculty %}
+selected
+{% endif %}
 >
 {{ f }}
 </option>
@@ -1978,9 +2356,12 @@ value="{{ f }}"
 
 </div>
 
+
 <div>
 
-<label>Year</label>
+<label>
+Year
+</label>
 
 <select
 name="year"
@@ -1991,7 +2372,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ y }}"
-{% if y == year %}selected{% endif %}
+{% if y == year %}
+selected
+{% endif %}
 >
 {{ y }}
 </option>
@@ -2002,9 +2385,12 @@ value="{{ y }}"
 
 </div>
 
+
 <div>
 
-<label>Day</label>
+<label>
+Day
+</label>
 
 <select
 name="day"
@@ -2015,7 +2401,9 @@ onchange="this.form.submit()"
 
 <option
 value="{{ d }}"
-{% if d == day %}selected{% endif %}
+{% if d == day %}
+selected
+{% endif %}
 >
 {{ d }}
 </option>
@@ -2030,23 +2418,32 @@ value="{{ d }}"
 
 </form>
 
+
 <div class="section">
 
-<h2>{{ day }} Attendance</h2>
+<h2>
+{{ day }} Attendance
+</h2>
+
 
 {% if data %}
 
 {% for slot, value in data.items() %}
 
-{% set subject = lecture_text(value) %}
+{% set lectures = get_lecture_list(value) %}
+
+
+{% for subject in lectures %}
 
 {% set status = get_status(
 today_date,
 faculty,
 year,
 day,
-slot
+slot,
+subject
 ) %}
+
 
 <div class="lecture">
 
@@ -2054,11 +2451,12 @@ slot
 {{ slot }}
 </div>
 
-<div class="subject">
-{{ subject }}
-</div>
 
-<div class="attendance-buttons">
+<div class="subject">
+
+{{ subject }}
+
+<br>
 
 {% if status == "taken" %}
 
@@ -2078,11 +2476,28 @@ slot
 CANCELLED
 </span>
 
+{% else %}
+
+<span
+style="
+font-size:11px;
+color:#94a3b8;
+"
+>
+Not marked yet
+</span>
+
 {% endif %}
+
+</div>
+
+
+<div class="attendance-buttons">
 
 <form
 method="post"
 action="{{ url_for('mark_attendance') }}"
+class="attendance-form"
 >
 
 <input
@@ -2115,6 +2530,7 @@ name="subject"
 value="{{ subject }}"
 >
 
+
 <button
 name="status"
 value="taken"
@@ -2122,6 +2538,7 @@ class="btn btn-green"
 >
 ✓ Taken
 </button>
+
 
 <button
 name="status"
@@ -2131,6 +2548,7 @@ class="btn btn-red"
 ✕ Not Taken
 </button>
 
+
 <button
 name="status"
 value="cancelled"
@@ -2138,6 +2556,7 @@ class="btn btn-orange"
 >
 Cancel
 </button>
+
 
 <button
 name="status"
@@ -2153,7 +2572,11 @@ Undo
 
 </div>
 
+
 {% endfor %}
+
+{% endfor %}
+
 
 {% else %}
 
@@ -2176,8 +2599,9 @@ No classes scheduled.
         days=DAYS,
         data=data,
         lecture_text=lecture_text,
+        get_lecture_list=get_lecture_list,
         get_status=get_status,
-        today_date=date.today()
+        today_date=today_ist()
     )
 
 
@@ -2195,53 +2619,114 @@ def mark_attendance():
     faculty = request.form.get(
         "faculty",
         ""
-    )
+    ).strip()
 
     year = request.form.get(
         "year",
         ""
-    )
+    ).strip()
 
     day = request.form.get(
         "day",
         ""
-    )
+    ).strip()
 
     slot = request.form.get(
         "slot",
         ""
-    )
+    ).strip()
 
     subject = request.form.get(
         "subject",
         ""
-    )
+    ).strip()
 
     status = request.form.get(
         "status",
         ""
-    )
+    ).strip()
 
     user = current_user()
+
+
+    # --------------------------------------------------------
+    # BASIC VALIDATION
+    # --------------------------------------------------------
+
+    if not faculty or not year or not day:
+
+        flash(
+            "Invalid attendance information."
+        )
+
+        return redirect(
+            url_for(
+                "attendance"
+            )
+        )
+
+
+    if not slot or not subject:
+
+        flash(
+            "Lecture and time slot are required."
+        )
+
+        return redirect(
+            url_for(
+                "attendance",
+                faculty=faculty,
+                year=year,
+                day=day
+            )
+        )
+
+
+    # --------------------------------------------------------
+    # CLEAR / UNDO
+    # --------------------------------------------------------
 
     if status == "clear":
 
         record = Attendance.query.filter_by(
-            record_date=date.today(),
+
+            record_date=today_ist(),
+
             faculty=faculty,
+
             year=year,
+
             day=day,
-            slot=slot
+
+            slot=slot,
+
+            subject=subject
+
         ).first()
+
 
         if record:
 
-            db.session.delete(record)
+            db.session.delete(
+                record
+            )
+
             db.session.commit()
 
             flash(
-                "Attendance record removed."
+                f"Attendance record removed for {subject}."
             )
+
+        else:
+
+            flash(
+                f"No attendance record found for {subject}."
+            )
+
+
+    # --------------------------------------------------------
+    # MARK ATTENDANCE
+    # --------------------------------------------------------
 
     elif status in [
         "taken",
@@ -2250,42 +2735,101 @@ def mark_attendance():
     ]:
 
         record = Attendance.query.filter_by(
-            record_date=date.today(),
+
+            record_date=today_ist(),
+
             faculty=faculty,
+
             year=year,
+
             day=day,
-            slot=slot
+
+            slot=slot,
+
+            subject=subject
+
         ).first()
+
+
+        # ----------------------------------------------------
+        # UPDATE EXISTING RECORD
+        # ----------------------------------------------------
 
         if record:
 
             record.subject = subject
+
             record.status = status
-            record.marked_by = user.name
-            record.marked_at = datetime.now()
+
+            record.marked_by = (
+                user.name
+                if user
+                else None
+            )
+
+            record.marked_at = (
+                now_ist_naive()
+            )
+
+
+        # ----------------------------------------------------
+        # CREATE NEW RECORD
+        # ----------------------------------------------------
 
         else:
 
             record = Attendance(
-                record_date=date.today(),
+
+                record_date=today_ist(),
+
                 faculty=faculty,
+
                 year=year,
+
                 day=day,
+
                 slot=slot,
+
                 subject=subject,
+
                 status=status,
-                marked_by=user.name
+
+                marked_by=(
+                    user.name
+                    if user
+                    else None
+                ),
+
+                marked_at=now_ist_naive()
+
             )
 
-            db.session.add(record)
+            db.session.add(
+                record
+            )
+
 
         db.session.commit()
 
+
         flash(
-            "Class marked as "
-            + status.replace("_", " ").upper()
+            f"{subject} marked as "
+            + status
+            .replace(
+                "_",
+                " "
+            )
+            .upper()
             + "."
         )
+
+
+    else:
+
+        flash(
+            "Invalid attendance status."
+        )
+
 
     return redirect(
         url_for(
@@ -2314,6 +2858,11 @@ def access_control():
             "action"
         )
 
+
+        # ----------------------------------------------------
+        # CREATE USER
+        # ----------------------------------------------------
+
         if action == "create":
 
             name = request.form.get(
@@ -2337,11 +2886,17 @@ def access_control():
                 ) == "on"
             )
 
-            if not name or not username or not password:
+
+            if (
+                not name
+                or not username
+                or not password
+            ):
 
                 flash(
                     "Please fill all required fields."
                 )
+
 
             elif User.query.filter_by(
                 username=username
@@ -2351,23 +2906,37 @@ def access_control():
                     "Username already exists."
                 )
 
+
             else:
 
                 user = User(
+
                     name=name,
+
                     username=username,
+
                     password_hash=generate_password_hash(
                         password
                     ),
+
                     attendance_access=access
+
                 )
 
-                db.session.add(user)
+                db.session.add(
+                    user
+                )
+
                 db.session.commit()
 
                 flash(
                     "New person added successfully."
                 )
+
+
+        # ----------------------------------------------------
+        # TOGGLE ACCESS
+        # ----------------------------------------------------
 
         elif action == "toggle":
 
@@ -2375,11 +2944,22 @@ def access_control():
                 "user_id"
             )
 
-            user = User.query.get(
-                int(user_id)
-            )
+            try:
 
-            if user and user.username != ADMIN_USERNAME:
+                user = User.query.get(
+                    int(user_id)
+                )
+
+            except Exception:
+
+                user = None
+
+
+            if (
+                user
+                and user.username
+                != ADMIN_USERNAME
+            ):
 
                 user.attendance_access = (
                     not user.attendance_access
@@ -2391,34 +2971,57 @@ def access_control():
                     "Attendance access updated."
                 )
 
+
+        # ----------------------------------------------------
+        # DELETE USER
+        # ----------------------------------------------------
+
         elif action == "delete":
 
             user_id = request.form.get(
                 "user_id"
             )
 
-            user = User.query.get(
-                int(user_id)
-            )
+            try:
 
-            if user and user.username != ADMIN_USERNAME:
+                user = User.query.get(
+                    int(user_id)
+                )
 
-                db.session.delete(user)
+            except Exception:
+
+                user = None
+
+
+            if (
+                user
+                and user.username
+                != ADMIN_USERNAME
+            ):
+
+                db.session.delete(
+                    user
+                )
+
                 db.session.commit()
 
                 flash(
                     "Person deleted."
                 )
 
+
     users = User.query.order_by(
         User.id.asc()
     ).all()
+
 
     content = """
 
 <div class="hero">
 
-<h1>👥 Access Control</h1>
+<h1>
+👥 Access Control
+</h1>
 
 <p>
 Admin can decide who can mark attendance.
@@ -2426,9 +3029,13 @@ Admin can decide who can mark attendance.
 
 </div>
 
+
 <div class="section">
 
-<h2>➕ Add Person</h2>
+<h2>
+➕ Add Person
+</h2>
+
 
 <form method="post">
 
@@ -2438,11 +3045,15 @@ name="action"
 value="create"
 >
 
+
 <div class="filter-grid">
+
 
 <div>
 
-<label>Person Name</label>
+<label>
+Person Name
+</label>
 
 <input
 name="name"
@@ -2452,9 +3063,12 @@ placeholder="Teacher / Staff Name"
 
 </div>
 
+
 <div>
 
-<label>Username</label>
+<label>
+Username
+</label>
 
 <input
 name="username"
@@ -2464,9 +3078,12 @@ placeholder="Username"
 
 </div>
 
+
 <div>
 
-<label>Password</label>
+<label>
+Password
+</label>
 
 <input
 type="password"
@@ -2476,6 +3093,7 @@ placeholder="Password"
 >
 
 </div>
+
 
 <div>
 
@@ -2496,9 +3114,12 @@ Allow this person to mark attendance
 
 </div>
 
+
 </div>
 
+
 <br>
+
 
 <button
 class="btn btn-blue"
@@ -2514,7 +3135,10 @@ type="submit"
 
 <div class="section">
 
-<h2>👤 People & Access</h2>
+<h2>
+👤 People & Access
+</h2>
+
 
 <div class="table-wrap">
 
@@ -2524,28 +3148,45 @@ type="submit"
 
 <tr>
 
-<th>Name</th>
-<th>Username</th>
-<th>Attendance Access</th>
-<th>Action</th>
+<th>
+Name
+</th>
+
+<th>
+Username
+</th>
+
+<th>
+Attendance Access
+</th>
+
+<th>
+Action
+</th>
 
 </tr>
 
 </thead>
 
+
 <tbody>
+
 
 {% for u in users %}
 
 <tr>
 
 <td>
-<strong>{{ u.name }}</strong>
+<strong>
+{{ u.name }}
+</strong>
 </td>
+
 
 <td>
 {{ u.username }}
 </td>
+
 
 <td>
 
@@ -2565,7 +3206,9 @@ type="submit"
 
 </td>
 
+
 <td>
+
 
 {% if u.username == admin_username %}
 
@@ -2573,7 +3216,9 @@ type="submit"
 ADMIN
 </span>
 
+
 {% else %}
+
 
 <form
 method="post"
@@ -2592,6 +3237,7 @@ name="user_id"
 value="{{ u.id }}"
 >
 
+
 <button
 class="btn btn-blue"
 type="submit"
@@ -2600,6 +3246,7 @@ type="submit"
 </button>
 
 </form>
+
 
 <form
 method="post"
@@ -2619,6 +3266,7 @@ name="user_id"
 value="{{ u.id }}"
 >
 
+
 <button
 class="btn btn-red"
 type="submit"
@@ -2628,6 +3276,7 @@ Delete
 
 </form>
 
+
 {% endif %}
 
 </td>
@@ -2635,6 +3284,7 @@ Delete
 </tr>
 
 {% endfor %}
+
 
 </tbody>
 
@@ -2663,7 +3313,9 @@ def reports():
 
     faculty = request.args.get(
         "faculty",
-        faculties[0] if faculties else ""
+        faculties[0]
+        if faculties
+        else ""
     )
 
     years = get_years(
@@ -2672,7 +3324,9 @@ def reports():
 
     year = request.args.get(
         "year",
-        years[0] if years else ""
+        years[0]
+        if years
+        else ""
     )
 
     period = request.args.get(
@@ -2684,6 +3338,11 @@ def reports():
         "subject",
         ""
     )
+
+
+    # --------------------------------------------------------
+    # DATE RANGE
+    # --------------------------------------------------------
 
     if period == "custom":
 
@@ -2719,13 +3378,27 @@ def reports():
             )
         )
 
+
+    # --------------------------------------------------------
+    # RECORDS
+    # --------------------------------------------------------
+
     records = get_report_records(
+
         faculty,
+
         year,
+
         start_date,
+
         end_date,
-        subject if subject else None
+
+        subject
+        if subject
+        else None
+
     )
+
 
     (
         total,
@@ -2737,23 +3410,38 @@ def reports():
         records
     )
 
+
+    # --------------------------------------------------------
+    # SUBJECT LIST
+    # --------------------------------------------------------
+
     subjects = sorted({
+
         r.subject
+
         for r in Attendance.query.filter_by(
+
             faculty=faculty,
+
             year=year
+
         ).all()
+
     })
+
 
     subject_stats = subject_statistics(
         records
     )
 
+
     content = """
 
 <div class="hero">
 
-<h1>📊 Attendance Reports</h1>
+<h1>
+📊 Attendance Reports
+</h1>
 
 <p>
 Daily • Weekly • Monthly • Yearly • Subject-wise
@@ -2761,13 +3449,20 @@ Daily • Weekly • Monthly • Yearly • Subject-wise
 
 </div>
 
-<form class="filters" method="get">
+
+<form
+class="filters"
+method="get"
+>
 
 <div class="filter-grid">
 
+
 <div>
 
-<label>Faculty</label>
+<label>
+Faculty
+</label>
 
 <select name="faculty">
 
@@ -2775,7 +3470,9 @@ Daily • Weekly • Monthly • Yearly • Subject-wise
 
 <option
 value="{{ f }}"
-{% if f == faculty %}selected{% endif %}
+{% if f == faculty %}
+selected
+{% endif %}
 >
 {{ f }}
 </option>
@@ -2786,9 +3483,12 @@ value="{{ f }}"
 
 </div>
 
+
 <div>
 
-<label>Year</label>
+<label>
+Year
+</label>
 
 <select name="year">
 
@@ -2796,7 +3496,9 @@ value="{{ f }}"
 
 <option
 value="{{ y }}"
-{% if y == year %}selected{% endif %}
+{% if y == year %}
+selected
+{% endif %}
 >
 {{ y }}
 </option>
@@ -2807,38 +3509,56 @@ value="{{ y }}"
 
 </div>
 
+
 <div>
 
-<label>Period</label>
+<label>
+Period
+</label>
 
 <select name="period">
 
-<option value="today"
-{% if period == "today" %}selected{% endif %}
+<option
+value="today"
+{% if period == "today" %}
+selected
+{% endif %}
 >
 Today
 </option>
 
-<option value="week"
-{% if period == "week" %}selected{% endif %}
+<option
+value="week"
+{% if period == "week" %}
+selected
+{% endif %}
 >
 This Week
 </option>
 
-<option value="month"
-{% if period == "month" %}selected{% endif %}
+<option
+value="month"
+{% if period == "month" %}
+selected
+{% endif %}
 >
 This Month
 </option>
 
-<option value="year"
-{% if period == "year" %}selected{% endif %}
+<option
+value="year"
+{% if period == "year" %}
+selected
+{% endif %}
 >
 This Year
 </option>
 
-<option value="custom"
-{% if period == "custom" %}selected{% endif %}
+<option
+value="custom"
+{% if period == "custom" %}
+selected
+{% endif %}
 >
 Custom
 </option>
@@ -2847,9 +3567,12 @@ Custom
 
 </div>
 
+
 <div>
 
-<label>Subject</label>
+<label>
+Subject
+</label>
 
 <select name="subject">
 
@@ -2857,11 +3580,14 @@ Custom
 All Subjects
 </option>
 
+
 {% for s in subjects %}
 
 <option
 value="{{ s }}"
-{% if s == subject %}selected{% endif %}
+{% if s == subject %}
+selected
+{% endif %}
 >
 {{ s }}
 </option>
@@ -2872,9 +3598,12 @@ value="{{ s }}"
 
 </div>
 
+
 <div>
 
-<label>Start Date</label>
+<label>
+Start Date
+</label>
 
 <input
 type="date"
@@ -2884,9 +3613,12 @@ value="{{ start_date }}"
 
 </div>
 
+
 <div>
 
-<label>End Date</label>
+<label>
+End Date
+</label>
 
 <input
 type="date"
@@ -2896,9 +3628,12 @@ value="{{ end_date }}"
 
 </div>
 
+
 <div>
 
-<label>&nbsp;</label>
+<label>
+&nbsp;
+</label>
 
 <button
 class="btn btn-blue"
@@ -2909,9 +3644,12 @@ Generate Report
 
 </div>
 
+
 <div>
 
-<label>&nbsp;</label>
+<label>
+&nbsp;
+</label>
 
 <a
 class="btn btn-green"
@@ -2930,11 +3668,14 @@ end_date=end_date
 
 </div>
 
+
 </div>
 
 </form>
 
+
 <div class="cards">
+
 
 <div class="stat">
 
@@ -2948,6 +3689,7 @@ RECORDED
 
 </div>
 
+
 <div class="stat">
 
 <div class="stat-title">
@@ -2959,6 +3701,7 @@ TAKEN
 </div>
 
 </div>
+
 
 <div class="stat">
 
@@ -2972,6 +3715,7 @@ NOT TAKEN
 
 </div>
 
+
 <div class="stat">
 
 <div class="stat-title">
@@ -2983,6 +3727,7 @@ CANCELLED
 </div>
 
 </div>
+
 
 <div class="stat">
 
@@ -2998,11 +3743,16 @@ COMPLETION
 
 </div>
 
+
 <div class="section">
 
-<h2>📚 Subject-wise Report</h2>
+<h2>
+📚 Subject-wise Report
+</h2>
+
 
 {% if subject_stats %}
+
 
 <div class="table-wrap">
 
@@ -3011,27 +3761,52 @@ COMPLETION
 <thead>
 
 <tr>
-<th>Subject</th>
-<th>Total</th>
-<th>Taken</th>
-<th>Not Taken</th>
-<th>Cancelled</th>
-<th>Percentage</th>
+
+<th>
+Subject
+</th>
+
+<th>
+Total
+</th>
+
+<th>
+Taken
+</th>
+
+<th>
+Not Taken
+</th>
+
+<th>
+Cancelled
+</th>
+
+<th>
+Percentage
+</th>
+
 </tr>
 
 </thead>
 
+
 <tbody>
+
 
 {% for name, data in subject_stats.items() %}
 
 <tr>
 
 <td>
-<strong>{{ name }}</strong>
+<strong>
+{{ name }}
+</strong>
 </td>
 
-<td>{{ data.total }}</td>
+<td>
+{{ data.total }}
+</td>
 
 <td class="green">
 {{ data.taken }}
@@ -3064,11 +3839,13 @@ style="width:{{ data.percentage }}%"
 
 {% endfor %}
 
+
 </tbody>
 
 </table>
 
 </div>
+
 
 {% else %}
 
@@ -3080,11 +3857,16 @@ No attendance records found.
 
 </div>
 
+
 <div class="section">
 
-<h2>📝 Detailed Records</h2>
+<h2>
+📝 Detailed Records
+</h2>
+
 
 {% if records %}
+
 
 <div class="table-wrap">
 
@@ -3093,17 +3875,38 @@ No attendance records found.
 <thead>
 
 <tr>
-<th>Date</th>
-<th>Day</th>
-<th>Time</th>
-<th>Subject</th>
-<th>Status</th>
-<th>Marked By</th>
+
+<th>
+Date
+</th>
+
+<th>
+Day
+</th>
+
+<th>
+Time
+</th>
+
+<th>
+Subject
+</th>
+
+<th>
+Status
+</th>
+
+<th>
+Marked By
+</th>
+
 </tr>
 
 </thead>
 
+
 <tbody>
+
 
 {% for r in records %}
 
@@ -3127,17 +3930,20 @@ No attendance records found.
 
 <td>
 
+
 {% if r.status == "taken" %}
 
 <span class="badge badge-taken">
 ✓ TAKEN
 </span>
 
+
 {% elif r.status == "not_taken" %}
 
 <span class="badge badge-not">
 ✕ NOT TAKEN
 </span>
+
 
 {% else %}
 
@@ -3146,6 +3952,7 @@ CANCELLED
 </span>
 
 {% endif %}
+
 
 </td>
 
@@ -3157,11 +3964,13 @@ CANCELLED
 
 {% endfor %}
 
+
 </tbody>
 
 </table>
 
 </div>
+
 
 {% else %}
 
@@ -3175,23 +3984,41 @@ No records found.
 """
 
     return render_page(
+
         content,
+
         faculties=faculties,
+
         faculty=faculty,
+
         years=years,
+
         year=year,
+
         period=period,
+
         subject=subject,
+
         subjects=subjects,
+
         start_date=start_date,
+
         end_date=end_date,
+
         total=total,
+
         taken=taken,
+
         not_taken=not_taken,
+
         cancelled=cancelled,
+
         percentage=percentage,
+
         subject_stats=subject_stats,
+
         records=records
+
     )
 
 
@@ -3199,14 +4026,18 @@ No records found.
 # CSV EXPORT
 # ============================================================
 
-@app.route("/reports/export.csv")
+@app.route(
+    "/reports/export.csv"
+)
 def export_csv():
 
     faculties = get_faculties()
 
     faculty = request.args.get(
         "faculty",
-        faculties[0] if faculties else ""
+        faculties[0]
+        if faculties
+        else ""
     )
 
     years = get_years(
@@ -3215,7 +4046,9 @@ def export_csv():
 
     year = request.args.get(
         "year",
-        years[0] if years else ""
+        years[0]
+        if years
+        else ""
     )
 
     period = request.args.get(
@@ -3227,6 +4060,11 @@ def export_csv():
         "subject",
         ""
     )
+
+
+    # --------------------------------------------------------
+    # DATE RANGE
+    # --------------------------------------------------------
 
     if period == "custom":
 
@@ -3262,19 +4100,30 @@ def export_csv():
             )
         )
 
+
     records = get_report_records(
+
         faculty,
+
         year,
+
         start_date,
+
         end_date,
-        subject if subject else None
+
+        subject
+        if subject
+        else None
+
     )
+
 
     output = io.StringIO()
 
     writer = csv.writer(
         output
     )
+
 
     writer.writerow([
         "Date",
@@ -3288,23 +4137,37 @@ def export_csv():
         "Marked At"
     ])
 
+
     for r in records:
 
         writer.writerow([
+
             r.record_date.strftime(
                 "%Y-%m-%d"
             ),
+
             r.faculty,
+
             r.year,
+
             r.day,
+
             r.slot,
+
             r.subject,
+
             r.status,
+
             r.marked_by or "",
+
             r.marked_at.strftime(
                 "%Y-%m-%d %H:%M:%S"
             )
+            if r.marked_at
+            else ""
+
         ])
+
 
     filename = (
         "SGB_Attendance_"
@@ -3312,13 +4175,18 @@ def export_csv():
         f"{end_date}.csv"
     )
 
+
     return Response(
+
         output.getvalue(),
+
         mimetype="text/csv",
+
         headers={
             "Content-Disposition":
             f"attachment; filename={filename}"
         }
+
     )
 
 
@@ -3331,7 +4199,12 @@ def health():
 
     return {
         "status": "ok",
-        "application": "SGB College Management System"
+        "application":
+            "SGB College Management System",
+        "timezone":
+            "Asia/Kolkata",
+        "current_time":
+            now_ist().isoformat()
     }
 
 
@@ -3346,7 +4219,9 @@ def not_found(error):
 
 <div class="empty">
 
-<h1>404</h1>
+<h1>
+404
+</h1>
 
 <p>
 Page not found.
@@ -3368,6 +4243,42 @@ Go Home
 
 
 # ============================================================
+# ERROR HANDLER
+# ============================================================
+
+@app.errorhandler(500)
+def server_error(error):
+
+    db.session.rollback()
+
+    content = """
+
+<div class="empty">
+
+<h1>
+500
+</h1>
+
+<p>
+Something went wrong on the server.
+</p>
+
+<a
+href="{{ url_for('home') }}"
+class="btn btn-blue"
+>
+Go Home
+</a>
+
+</div>
+"""
+
+    return render_page(
+        content
+    ), 500
+
+
+# ============================================================
 # RUN
 # ============================================================
 
@@ -3375,33 +4286,67 @@ if __name__ == "__main__":
 
     print()
     print("=" * 60)
-    print("SGB COLLEGE MANAGEMENT SYSTEM")
+    print(
+        "SGB COLLEGE MANAGEMENT SYSTEM"
+    )
     print("=" * 60)
     print()
+
+    print("Timezone:")
+    print("Asia/Kolkata")
+    print()
+
+    print("Current India Time:")
+    print(
+        now_ist().strftime(
+            "%d-%m-%Y %I:%M:%S %p"
+        )
+    )
+    print()
+
     print("Computer:")
-    print("http://127.0.0.1:5000")
+    print(
+        "http://127.0.0.1:5000"
+    )
     print()
+
     print("Phone / Same Wi-Fi:")
-    print("http://192.168.1.16:5000")
+    print(
+        "http://192.168.1.16:5000"
+    )
     print()
+
     print("Public deployment:")
-    print("Deploy this application to a cloud server.")
+    print(
+        "Deploy this application to a cloud server."
+    )
     print()
+
     print("Admin username:")
-    print(ADMIN_USERNAME)
+    print(
+        ADMIN_USERNAME
+    )
     print()
+
     print("Default admin password:")
-    print(ADMIN_PASSWORD)
+    print(
+        ADMIN_PASSWORD
+    )
     print()
+
     print("=" * 60)
 
     app.run(
+
         host="0.0.0.0",
+
         port=int(
             os.environ.get(
                 "PORT",
                 5000
             )
         ),
+
         debug=False
+
     )
