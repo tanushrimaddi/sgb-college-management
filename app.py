@@ -1,8 +1,12 @@
+```python
 import os
 import json
+import csv
+import io
 import sqlite3
 from datetime import datetime, date
 from functools import wraps
+from zoneinfo import ZoneInfo
 
 from flask import (
     Flask,
@@ -11,8 +15,10 @@ from flask import (
     redirect,
     url_for,
     session,
-    flash
+    flash,
+    Response
 )
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 # ============================================================
@@ -38,10 +44,20 @@ ADMIN_USERNAME = os.environ.get(
     "admin"
 )
 
+# IMPORTANT:
+# Set ADMIN_PASSWORD_HASH in production.
+# If it is not present, ADMIN_PASSWORD will be used once.
+ADMIN_PASSWORD_HASH = os.environ.get(
+    "ADMIN_PASSWORD_HASH",
+    ""
+)
+
 ADMIN_PASSWORD = os.environ.get(
     "ADMIN_PASSWORD",
     "admin123"
 )
+
+IST = ZoneInfo("Asia/Kolkata")
 
 
 FACULTIES = [
@@ -65,9 +81,87 @@ DAYS = [
     "Saturday"
 ]
 
+STATUS_LABELS = {
+    "taken": "Taken",
+    "not_taken": "Not Taken",
+    "cancelled": "Cancelled"
+}
+
 
 # ============================================================
-# LOAD TIMETABLE
+# TIME / DATE HELPERS
+# ============================================================
+
+def now_ist():
+    return datetime.now(IST)
+
+
+def today_ist():
+    return now_ist().date()
+
+
+def today_string():
+    return today_ist().isoformat()
+
+
+def current_day_ist():
+    return now_ist().strftime("%A")
+
+
+def time_to_minutes(value):
+
+    try:
+        value = value.strip()
+        h, m = map(int, value.split(":"))
+        return h * 60 + m
+    except Exception:
+        return 9999
+
+
+def time_sort_key(value):
+
+    try:
+        start = value.split("-")[0].strip()
+        return time_to_minutes(start)
+    except Exception:
+        return 9999
+
+
+def parse_time_range(value):
+
+    try:
+        start, end = value.split("-", 1)
+
+        return (
+            time_to_minutes(start),
+            time_to_minutes(end)
+        )
+
+    except Exception:
+        return None, None
+
+
+def current_time_minutes():
+
+    now = now_ist()
+
+    return now.hour * 60 + now.minute
+
+
+def is_current_slot(time_slot):
+
+    start, end = parse_time_range(time_slot)
+
+    if start is None or end is None:
+        return False
+
+    now = current_time_minutes()
+
+    return start <= now < end
+
+
+# ============================================================
+# TIMETABLE
 # ============================================================
 
 def load_timetable():
@@ -92,13 +186,172 @@ def load_timetable():
         return {}
 
 
+def get_subjects(
+    timetable,
+    faculty,
+    year,
+    day,
+    time_slot
+):
+
+    try:
+
+        data = (
+            timetable
+            .get(faculty, {})
+            .get(year, {})
+            .get(day, {})
+            .get(time_slot, [])
+        )
+
+        if isinstance(data, str):
+            return [data]
+
+        if isinstance(data, list):
+            return data
+
+        return []
+
+    except Exception:
+        return []
+
+
+def get_all_time_slots(
+    timetable,
+    faculty,
+    year
+):
+
+    slots = set()
+
+    year_data = (
+        timetable
+        .get(faculty, {})
+        .get(year, {})
+    )
+
+    for day in DAYS:
+
+        day_data = year_data.get(day, {})
+
+        if isinstance(day_data, dict):
+
+            for slot in day_data:
+                slots.add(slot)
+
+    return sorted(
+        slots,
+        key=time_sort_key
+    )
+
+
+def get_current_lectures(
+    timetable,
+    faculty,
+    year
+):
+
+    today = current_day_ist()
+
+    result = []
+
+    day_data = (
+        timetable
+        .get(faculty, {})
+        .get(year, {})
+        .get(today, {})
+    )
+
+    for time_slot in sorted(
+        day_data.keys(),
+        key=time_sort_key
+    ):
+
+        if is_current_slot(time_slot):
+
+            subjects = day_data.get(
+                time_slot,
+                []
+            )
+
+            if isinstance(subjects, str):
+                subjects = [subjects]
+
+            for subject in subjects:
+
+                result.append({
+                    "time": time_slot,
+                    "lecture": subject
+                })
+
+    return result
+
+
+def get_next_lecture(
+    timetable,
+    faculty,
+    year
+):
+
+    today = current_day_ist()
+
+    now = current_time_minutes()
+
+    day_data = (
+        timetable
+        .get(faculty, {})
+        .get(year, {})
+        .get(today, {})
+    )
+
+    possible = []
+
+    for time_slot in day_data:
+
+        start, end = parse_time_range(
+            time_slot
+        )
+
+        if (
+            start is not None
+            and start > now
+        ):
+
+            possible.append(
+                (start, time_slot)
+            )
+
+    possible.sort()
+
+    if not possible:
+        return None
+
+    slot = possible[0][1]
+
+    subjects = day_data.get(
+        slot,
+        []
+    )
+
+    if isinstance(subjects, str):
+        subjects = [subjects]
+
+    return {
+        "time": slot,
+        "lectures": subjects
+    }
+
+
 # ============================================================
 # DATABASE
 # ============================================================
 
 def get_db():
 
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(
+        DATABASE,
+        timeout=30
+    )
 
     conn.row_factory = sqlite3.Row
 
@@ -129,12 +382,38 @@ def init_db():
 
             marked_by TEXT,
 
-            marked_at TEXT
+            marked_at TEXT,
+
+            UNIQUE (
+                attendance_date,
+                faculty,
+                year,
+                day,
+                time_slot
+            )
         )
     """)
 
-    conn.commit()
+    # Indexes for faster report searching.
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS
+        idx_attendance_date
+        ON attendance(attendance_date)
+    """)
 
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS
+        idx_attendance_faculty_year
+        ON attendance(faculty, year)
+    """)
+
+    conn.execute("""
+        CREATE INDEX IF NOT EXISTS
+        idx_attendance_subject
+        ON attendance(lecture)
+    """)
+
+    conn.commit()
     conn.close()
 
 
@@ -142,7 +421,7 @@ init_db()
 
 
 # ============================================================
-# LOGIN DECORATOR
+# LOGIN
 # ============================================================
 
 def admin_required(function):
@@ -150,7 +429,9 @@ def admin_required(function):
     @wraps(function)
     def wrapper(*args, **kwargs):
 
-        if not session.get("admin_logged_in"):
+        if not session.get(
+            "admin_logged_in"
+        ):
 
             return redirect(
                 url_for(
@@ -164,229 +445,373 @@ def admin_required(function):
     return wrapper
 
 
-# ============================================================
-# TIME FUNCTIONS
-# ============================================================
+def verify_admin_password(password):
 
-def time_to_minutes(value):
+    if ADMIN_PASSWORD_HASH:
 
-    try:
-
-        h, m = map(
-            int,
-            value.strip().split(":")
-        )
-
-        return h * 60 + m
-
-    except:
-
-        return 9999
-
-
-def time_sort_key(value):
-
-    try:
-
-        start = value.split("-")[0].strip()
-
-        return time_to_minutes(start)
-
-    except:
-
-        return 9999
-
-
-def parse_time_range(value):
-
-    try:
-
-        start, end = value.split("-")
-
-        return (
-            time_to_minutes(start),
-            time_to_minutes(end)
-        )
-
-    except:
-
-        return None, None
-
-
-def current_time_minutes():
-
-    now = datetime.now()
-
-    return now.hour * 60 + now.minute
-
-
-def is_current_slot(time_slot):
-
-    start, end = parse_time_range(time_slot)
-
-    if start is None:
-        return False
-
-    now = current_time_minutes()
-
-    return start <= now < end
-
-
-# ============================================================
-# SUBJECT FUNCTIONS
-# ============================================================
-
-def get_subjects(
-    timetable,
-    faculty,
-    year,
-    day,
-    time_slot
-):
-
-    try:
-
-        data = (
-            timetable
-            .get(faculty, {})
-            .get(year, {})
-            .get(day, {})
-            .get(time_slot, [])
-        )
-
-        if isinstance(data, str):
-
-            return [data]
-
-        return data or []
-
-    except:
-
-        return []
-
-
-def get_all_time_slots(
-    timetable,
-    faculty,
-    year
-):
-
-    slots = set()
-
-    year_data = (
-        timetable
-        .get(faculty, {})
-        .get(year, {})
-    )
-
-    for day in DAYS:
-
-        day_data = year_data.get(
-            day,
-            {}
-        )
-
-        for slot in day_data:
-
-            slots.add(slot)
-
-    return sorted(
-        slots,
-        key=time_sort_key
-    )
-
-
-# ============================================================
-# CURRENT LECTURE
-# ============================================================
-
-def get_current_lectures(
-    timetable,
-    faculty,
-    year
-):
-
-    today = datetime.now().strftime("%A")
-
-    result = []
-
-    day_data = (
-        timetable
-        .get(faculty, {})
-        .get(year, {})
-        .get(today, {})
-    )
-
-    for time_slot in sorted(
-        day_data.keys(),
-        key=time_sort_key
-    ):
-
-        if is_current_slot(time_slot):
-
-            subjects = day_data.get(
-                time_slot,
-                []
+        try:
+            return check_password_hash(
+                ADMIN_PASSWORD_HASH,
+                password
             )
+        except Exception:
+            return False
 
-            for subject in subjects:
-
-                result.append({
-                    "time": time_slot,
-                    "lecture": subject
-                })
-
-    return result
+    return password == ADMIN_PASSWORD
 
 
-def get_next_lecture(
-    timetable,
-    faculty,
-    year
-):
+# ============================================================
+# SHARED CSS
+# ============================================================
 
-    today = datetime.now().strftime("%A")
+BASE_CSS = r"""
+* {
+    box-sizing:border-box;
+}
 
-    now = current_time_minutes()
+body {
+    margin:0;
+    font-family:Arial, sans-serif;
+    background:#f1f5f9;
+    color:#1e293b;
+}
 
-    day_data = (
-        timetable
-        .get(faculty, {})
-        .get(year, {})
-        .get(today, {})
-    )
+.navbar {
+    background:#111827;
+    color:white;
+    padding:14px 24px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+}
 
-    possible = []
+.logo {
+    font-size:20px;
+    font-weight:bold;
+}
 
-    for time_slot in day_data:
+.logo small {
+    display:block;
+    font-size:9px;
+    opacity:.65;
+    margin-top:3px;
+}
 
-        start, end = parse_time_range(
-            time_slot
-        )
+.nav {
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+}
 
-        if start is not None and start > now:
+.nav a {
+    color:white;
+    text-decoration:none;
+    padding:7px 9px;
+    border-radius:7px;
+    font-size:13px;
+}
 
-            possible.append(
-                (start, time_slot)
-            )
+.nav a:hover {
+    background:#374151;
+}
 
-    possible.sort()
+.container {
+    max-width:1400px;
+    margin:auto;
+    padding:22px;
+}
 
-    if not possible:
+.hero {
+    background:linear-gradient(135deg,#2563eb,#7c3aed);
+    color:white;
+    padding:30px;
+    border-radius:18px;
+    margin-bottom:20px;
+}
 
-        return None
+.hero h1 {
+    margin:0;
+    font-size:30px;
+}
 
-    slot = possible[0][1]
+.hero p {
+    margin-bottom:0;
+    opacity:.9;
+}
 
-    subjects = day_data.get(
-        slot,
-        []
-    )
+.box {
+    background:white;
+    padding:20px;
+    border-radius:14px;
+    margin-bottom:20px;
+    box-shadow:0 4px 15px rgba(0,0,0,.05);
+}
 
-    return {
-        "time": slot,
-        "lectures": subjects
+.controls {
+    display:flex;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:end;
+}
+
+.field {
+    flex:1;
+    min-width:170px;
+}
+
+label {
+    display:block;
+    font-weight:bold;
+    margin-bottom:6px;
+    font-size:13px;
+}
+
+input,
+select {
+    width:100%;
+    padding:11px;
+    border:1px solid #cbd5e1;
+    border-radius:8px;
+    background:white;
+    font-size:14px;
+}
+
+button,
+.btn {
+    display:inline-block;
+    border:0;
+    border-radius:8px;
+    padding:11px 16px;
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+    text-decoration:none;
+    font-weight:bold;
+}
+
+.btn.green {
+    background:#16a34a;
+}
+
+.btn.gray {
+    background:#475569;
+}
+
+.btn.red {
+    background:#dc2626;
+}
+
+.btn.dark {
+    background:#111827;
+}
+
+.btn.purple {
+    background:#7c3aed;
+}
+
+.btn.small {
+    padding:7px 10px;
+    font-size:12px;
+}
+
+.cards {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:15px;
+    margin-bottom:20px;
+}
+
+.card {
+    background:white;
+    padding:20px;
+    border-radius:14px;
+    box-shadow:0 4px 15px rgba(0,0,0,.05);
+}
+
+.card-title {
+    color:#64748b;
+    font-size:12px;
+    text-transform:uppercase;
+}
+
+.card-value {
+    font-size:25px;
+    font-weight:bold;
+    margin-top:8px;
+}
+
+.green-text {
+    color:#16a34a;
+}
+
+.blue-text {
+    color:#2563eb;
+}
+
+.red-text {
+    color:#dc2626;
+}
+
+.purple-text {
+    color:#7c3aed;
+}
+
+.table-wrapper {
+    overflow-x:auto;
+}
+
+table {
+    width:100%;
+    border-collapse:collapse;
+    min-width:850px;
+}
+
+th {
+    background:#172554;
+    color:white;
+    padding:11px;
+    border:1px solid #cbd5e1;
+    text-align:center;
+}
+
+td {
+    padding:10px;
+    border:1px solid #dbe3ee;
+    text-align:center;
+    vertical-align:middle;
+}
+
+.time {
+    background:#f1f5f9;
+    font-weight:bold;
+}
+
+.subject {
+    display:block;
+    background:#eff6ff;
+    color:#1e3a8a;
+    padding:7px;
+    margin:3px;
+    border-radius:6px;
+    font-size:13px;
+}
+
+.badge {
+    display:inline-block;
+    padding:5px 9px;
+    border-radius:20px;
+    font-size:11px;
+    font-weight:bold;
+}
+
+.badge.taken {
+    background:#dcfce7;
+    color:#166534;
+}
+
+.badge.not_taken {
+    background:#fee2e2;
+    color:#991b1b;
+}
+
+.badge.cancelled {
+    background:#e2e8f0;
+    color:#475569;
+}
+
+.badge.unmarked {
+    background:#fef3c7;
+    color:#92400e;
+}
+
+.live-row {
+    background:#dcfce7;
+}
+
+.flash {
+    padding:12px;
+    border-radius:8px;
+    background:#dcfce7;
+    color:#166534;
+    margin-bottom:15px;
+}
+
+.stat-grid {
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:12px;
+}
+
+.stat {
+    padding:15px;
+    border-radius:10px;
+    background:#f8fafc;
+    text-align:center;
+}
+
+.stat strong {
+    display:block;
+    font-size:22px;
+    margin-top:5px;
+}
+
+.empty {
+    text-align:center;
+    padding:30px;
+    color:#64748b;
+}
+
+@media(max-width:900px) {
+    .cards {
+        grid-template-columns:repeat(2,1fr);
     }
+
+    .stat-grid {
+        grid-template-columns:repeat(2,1fr);
+    }
+}
+
+@media(max-width:600px) {
+    .navbar {
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .container {
+        padding:12px;
+    }
+
+    .cards {
+        grid-template-columns:1fr;
+    }
+
+    .stat-grid {
+        grid-template-columns:1fr;
+    }
+
+    .hero h1 {
+        font-size:23px;
+    }
+}
+
+@media print {
+    .navbar,
+    .no-print,
+    .controls,
+    .top-buttons {
+        display:none !important;
+    }
+
+    body {
+        background:white;
+    }
+
+    .box {
+        box-shadow:none;
+    }
+}
+"""
 
 
 # ============================================================
@@ -396,579 +821,63 @@ def get_next_lecture(
 HOME_PAGE = r"""
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <title>SGB College Management</title>
-
-<meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-
-* {
-    box-sizing:border-box;
-}
-
-body {
-    margin:0;
-    font-family:Arial, sans-serif;
-    background:#f4f6fb;
-    color:#1e293b;
-}
-
-
-/* NAVBAR */
-
-.navbar {
-
-    background:#111827;
-
-    color:white;
-
-    padding:15px 30px;
-
-    display:flex;
-
-    align-items:center;
-
-    justify-content:space-between;
-
-    gap:20px;
-
-}
-
-.logo {
-
-    font-size:21px;
-
-    font-weight:bold;
-
-}
-
-.logo small {
-
-    display:block;
-
-    font-size:10px;
-
-    opacity:.7;
-
-    margin-top:3px;
-
-}
-
-.nav {
-
-    display:flex;
-
-    gap:25px;
-
-    flex-wrap:wrap;
-
-}
-
-.nav a {
-
-    color:white;
-
-    text-decoration:none;
-
-    font-size:14px;
-
-}
-
-
-/* HERO */
-
-.container {
-
-    max-width:1200px;
-
-    margin:auto;
-
-    padding:25px 18px;
-
-}
-
-.hero {
-
-    background:
-    linear-gradient(
-        135deg,
-        #2563eb,
-        #7c3aed
-    );
-
-    color:white;
-
-    padding:30px;
-
-    border-radius:20px;
-
-    margin-bottom:22px;
-
-}
-
-.hero h1 {
-
-    margin:0;
-
-    font-size:31px;
-
-}
-
-.hero p {
-
-    margin-bottom:0;
-
-    opacity:.9;
-
-}
-
-
-/* SELECT */
-
-.select-box {
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:15px;
-
-    box-shadow:
-    0 4px 15px rgba(0,0,0,.06);
-
-    display:flex;
-
-    gap:15px;
-
-    flex-wrap:wrap;
-
-}
-
-.select-group {
-
-    flex:1;
-
-    min-width:220px;
-
-}
-
-label {
-
-    display:block;
-
-    font-weight:bold;
-
-    margin-bottom:7px;
-
-}
-
-select {
-
-    width:100%;
-
-    padding:12px;
-
-    border:
-    1px solid #d1d5db;
-
-    border-radius:9px;
-
-    font-size:15px;
-
-}
-
-
-/* CARDS */
-
-.cards {
-
-    display:grid;
-
-    grid-template-columns:
-    repeat(
-        3,
-        1fr
-    );
-
-    gap:18px;
-
-    margin-top:20px;
-
-}
-
-.card {
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:15px;
-
-    box-shadow:
-    0 4px 15px rgba(0,0,0,.06);
-
-}
-
-.card-title {
-
-    font-size:13px;
-
-    color:#64748b;
-
-    text-transform:uppercase;
-
-}
-
-.live {
-
-    font-size:27px;
-
-    font-weight:bold;
-
-    color:#16a34a;
-
-    margin-top:8px;
-
-}
-
-.next {
-
-    font-size:24px;
-
-    font-weight:bold;
-
-    color:#2563eb;
-
-    margin-top:8px;
-
-}
-
-.today {
-
-    font-size:24px;
-
-    font-weight:bold;
-
-    margin-top:8px;
-
-}
-
-
-/* CURRENT */
-
-.section {
-
-    background:white;
-
-    margin-top:20px;
-
-    padding:22px;
-
-    border-radius:15px;
-
-    box-shadow:
-    0 4px 15px rgba(0,0,0,.06);
-
-}
-
-.section h2 {
-
-    margin-top:0;
-
-}
-
-.lecture {
-
-    display:flex;
-
-    justify-content:space-between;
-
-    align-items:center;
-
-    gap:10px;
-
-    padding:14px;
-
-    margin:8px 0;
-
-    background:#ecfdf5;
-
-    border-left:
-    4px solid #16a34a;
-
-    border-radius:8px;
-
-}
-
-.live-badge {
-
-    background:#16a34a;
-
-    color:white;
-
-    padding:6px 10px;
-
-    border-radius:20px;
-
-    font-size:11px;
-
-    font-weight:bold;
-
-}
-
-
-/* BUTTON */
-
-.master-btn {
-
-    display:block;
-
-    text-align:center;
-
-    margin-top:20px;
-
-    padding:17px;
-
-    border-radius:12px;
-
-    background:
-    linear-gradient(
-        135deg,
-        #2563eb,
-        #7c3aed
-    );
-
-    color:white;
-
-    text-decoration:none;
-
-    font-size:18px;
-
-    font-weight:bold;
-
-}
-
-
-/* TABLE */
-
-.table-wrapper {
-
-    overflow-x:auto;
-
-}
-
-table {
-
-    width:100%;
-
-    border-collapse:collapse;
-
-    min-width:850px;
-
-}
-
-th {
-
-    background:#172554;
-
-    color:white;
-
-    padding:12px;
-
-    border:1px solid #cbd5e1;
-
-}
-
-td {
-
-    padding:10px;
-
-    border:1px solid #dbe3ee;
-
-    text-align:center;
-
-    vertical-align:top;
-
-}
-
-.time {
-
-    background:#f1f5f9;
-
-    font-weight:bold;
-
-}
-
-.subject {
-
-    display:block;
-
-    background:#eff6ff;
-
-    color:#1e3a8a;
-
-    padding:7px;
-
-    margin:3px;
-
-    border-radius:6px;
-
-    font-size:13px;
-
-}
-
-.current-cell {
-
-    background:#dcfce7;
-
-}
-
-
-/* MASTER BUTTON */
-
-.all-class {
-
-    margin-top:25px;
-
-    background:#111827;
-
-    color:white;
-
-    padding:18px;
-
-    border-radius:14px;
-
-    text-align:center;
-
-}
-
-.all-class a {
-
-    display:inline-block;
-
-    margin-top:10px;
-
-    background:#2563eb;
-
-    color:white;
-
-    padding:13px 25px;
-
-    border-radius:9px;
-
-    text-decoration:none;
-
-    font-weight:bold;
-
-}
-
-
-/* MOBILE */
-
-@media(max-width:700px) {
-
-    .navbar {
-
-        padding:13px;
-
-        flex-direction:column;
-
-        align-items:flex-start;
-
-    }
-
-    .nav {
-
-        gap:12px;
-
-    }
-
-    .cards {
-
-        grid-template-columns:1fr;
-
-    }
-
-    .hero h1 {
-
-        font-size:24px;
-
-    }
-
-}
-
+{{ base_css }}
 </style>
-
 </head>
-
 
 <body>
 
-
 <div class="navbar">
 
-    <div class="logo">
+<div class="logo">
+🎓 SGB COLLEGE
+<small>MANAGEMENT SYSTEM</small>
+</div>
 
-        🎓 SGB COLLEGE
+<div class="nav">
+<a href="/">⌂ Home</a>
+<a href="/timetable">📅 Timetable</a>
+<a href="/master-timetable">📋 Master</a>
+<a href="/attendance">☑ Attendance</a>
+<a href="/reports">📊 Reports</a>
 
-        <small>MANAGEMENT SYSTEM</small>
-
-    </div>
-
-    <div class="nav">
-
-        <a href="/">⌂ Home</a>
-
-        <a href="/timetable">📅 Timetable</a>
-
-        <a href="/master-timetable">📋 Master</a>
-
-        <a href="/attendance">☑ Attendance</a>
-
-        <a href="/reports">📊 Reports</a>
-
-        {% if session.get("admin_logged_in") %}
-        <a href="/logout">Logout</a>
-        {% else %}
-        <a href="/login">🔐 Access</a>
-        {% endif %}
-
-    </div>
+{% if session.get("admin_logged_in") %}
+<a href="/logout">Logout</a>
+{% else %}
+<a href="/login">🔐 Admin</a>
+{% endif %}
+</div>
 
 </div>
 
 
 <div class="container">
 
-
 <div class="hero">
 
-    <h1>
-        🎓 SGB College Management
-    </h1>
+<h1>🎓 SGB College Management</h1>
 
-    <p>
-        Smart timetable, attendance and reports
-    </p>
+<p>
+Smart timetable, live lecture, attendance and reports
+</p>
+
+<p>
+Current IST Time:
+<strong>{{ current_datetime }}</strong>
+</p>
 
 </div>
 
 
-<form
-method="GET"
-action="/"
->
+<div class="box">
 
-<div class="select-box">
+<form method="GET" class="controls">
 
-
-<div class="select-group">
+<div class="field">
 
 <label>Faculty</label>
 
@@ -976,15 +885,9 @@ action="/"
 
 {% for f in faculties %}
 
-<option
-value="{{ f }}"
-{% if f == selected_faculty %}
-selected
-{% endif %}
->
-
+<option value="{{ f }}"
+{% if f == selected_faculty %}selected{% endif %}>
 {{ f }}
-
 </option>
 
 {% endfor %}
@@ -994,7 +897,7 @@ selected
 </div>
 
 
-<div class="select-group">
+<div class="field">
 
 <label>Year</label>
 
@@ -1002,15 +905,9 @@ selected
 
 {% for y in years %}
 
-<option
-value="{{ y }}"
-{% if y == selected_year %}
-selected
-{% endif %}
->
-
+<option value="{{ y }}"
+{% if y == selected_year %}selected{% endif %}>
 {{ y }}
-
 </option>
 
 {% endfor %}
@@ -1020,13 +917,16 @@ selected
 </div>
 
 
+<div>
+<button>VIEW</button>
 </div>
 
 </form>
 
+</div>
+
 
 <div class="cards">
-
 
 <div class="card">
 
@@ -1034,12 +934,12 @@ selected
 Current Lecture
 </div>
 
-<div class="live">
+<div class="card-value green-text">
 
 {% if current_lectures %}
-1 LIVE
+LIVE NOW
 {% else %}
-NO LIVE
+No Live Lecture
 {% endif %}
 
 </div>
@@ -1053,16 +953,12 @@ NO LIVE
 Next Lecture
 </div>
 
-<div class="next">
+<div class="card-value blue-text">
 
 {% if next_lecture %}
-
 {{ next_lecture.time }}
-
 {% else %}
-
 —
-
 {% endif %}
 
 </div>
@@ -1076,46 +972,58 @@ Next Lecture
 Today
 </div>
 
-<div class="today">
-
+<div class="card-value purple-text">
 {{ today }}
-
 </div>
 
 </div>
 
 
+<div class="card">
+
+<div class="card-title">
+Selected Class
+</div>
+
+<div class="card-value">
+{{ selected_faculty }}
+</div>
+
+<div>
+{{ selected_year }}
+</div>
+
+</div>
+
 </div>
 
 
-<div class="section">
+<div class="box">
 
-<h2>
-🟢 Current Lecture
-</h2>
-
+<h2>🟢 Current Lecture</h2>
 
 {% if current_lectures %}
 
 {% for item in current_lectures %}
 
-<div class="lecture">
+<div style="
+padding:15px;
+margin:8px 0;
+background:#ecfdf5;
+border-left:5px solid #16a34a;
+border-radius:8px;
+">
 
-<div>
+<strong>{{ item.time }}</strong>
 
-<strong>
-{{ item.time }}
-</strong>
-
-&nbsp;&nbsp;
+&nbsp; — &nbsp;
 
 {{ item.lecture }}
 
-</div>
-
-<div class="live-badge">
+<span class="badge taken"
+style="float:right;">
 LIVE NOW
-</div>
+</span>
 
 </div>
 
@@ -1123,66 +1031,60 @@ LIVE NOW
 
 {% else %}
 
-<p>
+<div class="empty">
 No lecture is currently running.
-</p>
+</div>
 
 {% endif %}
 
 </div>
 
 
-<!-- MASTER BUTTON -->
+<div class="box">
 
-<div class="all-class">
+<h2>➡️ Next Lecture</h2>
 
-<h2>
-📚 All Class Timetable
-</h2>
+{% if next_lecture %}
 
 <p>
-Science + Arts + Commerce
-<br>
-1st Year + 2nd Year + 3rd Year
+<strong>{{ next_lecture.time }}</strong>
 </p>
 
-<a href="/master-timetable">
+{% for subject in next_lecture.lectures %}
 
-OPEN ALL CLASS TIMETABLE
+<span class="subject">
+{{ subject }}
+</span>
 
-</a>
+{% endfor %}
+
+{% else %}
+
+<p>No more lectures scheduled for today.</p>
+
+{% endif %}
 
 </div>
 
 
-<!-- TODAY TABLE -->
+<div class="box">
 
-<div class="section">
-
-<h2>
-📅 Today's Timetable
-</h2>
+<h2>📅 Today's Timetable</h2>
 
 <div class="table-wrapper">
 
 <table>
 
 <tr>
-
 <th>TIME</th>
-
 <th>LECTURE</th>
-
 </tr>
-
 
 {% for slot in today_slots %}
 
-<tr
-{% if slot in current_slots %}
-class="current-cell"
-{% endif %}
->
+<tr {% if slot in current_slots %}
+class="live-row"
+{% endif %}>
 
 <td class="time">
 {{ slot }}
@@ -1190,7 +1092,7 @@ class="current-cell"
 
 <td>
 
-{% for subject in today_data.get(slot, []) %}
+{% for subject in today_data.get(slot,[]) %}
 
 <span class="subject">
 {{ subject }}
@@ -1211,35 +1113,61 @@ class="current-cell"
 </div>
 
 
+<div class="box" style="
+background:linear-gradient(135deg,#111827,#1e3a8a);
+color:white;
+text-align:center;
+">
+
+<h2>📚 All Class Timetable</h2>
+
+<p>
+Science + Arts + Commerce<br>
+1st Year + 2nd Year + 3rd Year
+</p>
+
+<a href="/master-timetable"
+class="btn">
+OPEN MASTER TIMETABLE
+</a>
+
+</div>
+
+
+<div class="box" style="
+text-align:center;
+">
+
+<h2>📊 Attendance Reports</h2>
+
+<p>
+Admin can retrieve old attendance by date, date range,
+faculty, year, day and subject.
+</p>
+
+<a href="/reports"
+class="btn purple">
+OPEN REPORTS
+</a>
+
+</div>
+
+
 </div>
 
 
 <script>
 
-/*
-Automatically refresh the page every 30 seconds
-so Current Lecture changes automatically.
-*/
-
-setTimeout(
-    function() {
-        location.reload();
-    },
-    30000
-);
+setTimeout(function() {
+    location.reload();
+}, 30000);
 
 </script>
 
-
 </body>
-
 </html>
 """
 
-
-# ============================================================
-# HOME ROUTE
-# ============================================================
 
 @app.route("/")
 def home():
@@ -1256,19 +1184,13 @@ def home():
         "1st Year"
     )
 
-
     if selected_faculty not in FACULTIES:
-
         selected_faculty = "Science"
 
-
     if selected_year not in YEARS:
-
         selected_year = "1st Year"
 
-
-    today = datetime.now().strftime("%A")
-
+    today = current_day_ist()
 
     today_data = (
         timetable
@@ -1277,12 +1199,10 @@ def home():
         .get(today, {})
     )
 
-
     today_slots = sorted(
         today_data.keys(),
         key=time_sort_key
     )
-
 
     current_lectures = get_current_lectures(
         timetable,
@@ -1290,12 +1210,10 @@ def home():
         selected_year
     )
 
-
     current_slots = [
         x["time"]
         for x in current_lectures
     ]
-
 
     next_lecture = get_next_lecture(
         timetable,
@@ -1303,381 +1221,92 @@ def home():
         selected_year
     )
 
-
     return render_template_string(
         HOME_PAGE,
-
+        base_css=BASE_CSS,
         faculties=FACULTIES,
-
         years=YEARS,
-
         selected_faculty=selected_faculty,
-
         selected_year=selected_year,
-
         current_lectures=current_lectures,
-
         current_slots=current_slots,
-
         next_lecture=next_lecture,
-
         today=today,
-
         today_data=today_data,
-
-        today_slots=today_slots
+        today_slots=today_slots,
+        current_datetime=now_ist().strftime(
+            "%d-%m-%Y %I:%M:%S %p"
+        )
     )
 
 
 # ============================================================
-# MASTER TIMETABLE PAGE
+# MASTER TIMETABLE
 # ============================================================
 
 MASTER_PAGE = r"""
 <!DOCTYPE html>
 <html>
-
 <head>
-
-<title>All Class Timetable</title>
-
-<meta
-name="viewport"
-content="width=device-width, initial-scale=1.0"
->
-
+<title>Master Timetable</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-
-* {
-    box-sizing:border-box;
-}
-
-body {
-
-    margin:0;
-
-    font-family:Arial,sans-serif;
-
-    background:#eef2f7;
-
-    color:#1e293b;
-
-}
-
-
-/* HEADER */
-
-.header {
-
-    background:
-    linear-gradient(
-        135deg,
-        #172554,
-        #2563eb
-    );
-
-    color:white;
-
-    padding:28px 20px;
-
-    text-align:center;
-
-}
-
-.header h1 {
-
-    margin:0;
-
-    font-size:30px;
-
-}
-
-.header p {
-
-    margin:8px 0 0;
-
-}
-
-
-/* CONTAINER */
-
-.container {
-
-    max-width:1500px;
-
-    margin:auto;
-
-    padding:20px;
-
-}
-
-
-/* BUTTONS */
-
-.top-buttons {
-
-    display:flex;
-
-    gap:10px;
-
-    flex-wrap:wrap;
-
-    margin-bottom:20px;
-
-}
-
-.btn {
-
-    display:inline-block;
-
-    padding:11px 18px;
-
-    border-radius:9px;
-
-    color:white;
-
-    text-decoration:none;
-
-    font-weight:bold;
-
-}
-
-.back {
-
-    background:#475569;
-
-}
-
-.print {
-
-    background:#16a34a;
-
-    border:none;
-
-    cursor:pointer;
-
-}
-
-
-/* FACULTY */
+{{ base_css }}
 
 .faculty {
-
-    margin-bottom:45px;
-
+    margin-bottom:40px;
 }
 
-.faculty-header {
-
-    background:
-    linear-gradient(
-        135deg,
-        #1e3a8a,
-        #4f46e5
-    );
-
+.faculty-title {
+    background:linear-gradient(135deg,#172554,#2563eb);
     color:white;
-
     padding:18px;
-
-    border-radius:
-    14px 14px 0 0;
-
+    border-radius:12px 12px 0 0;
 }
 
-.faculty-header h2 {
-
-    margin:0;
-
-}
-
-
-/* YEAR */
-
-.year {
-
+.year-title {
     background:white;
-
-    margin-top:15px;
-
-    border-radius:10px 10px 0 0;
-
-}
-
-.year-header {
-
-    padding:15px;
-
-    border-left:
-    5px solid #2563eb;
-
-    font-size:20px;
-
+    padding:14px;
+    font-size:19px;
     font-weight:bold;
-
+    border-left:5px solid #2563eb;
 }
-
-
-/* TABLE */
-
-.table-wrapper {
-
-    overflow-x:auto;
-
-}
-
-table {
-
-    width:100%;
-
-    min-width:1050px;
-
-    border-collapse:collapse;
-
-}
-
-th {
-
-    background:#172554;
-
-    color:white;
-
-    padding:13px 8px;
-
-    border:1px solid #cbd5e1;
-
-    text-align:center;
-
-}
-
-th.time {
-
-    min-width:125px;
-
-}
-
-td {
-
-    border:1px solid #dbe3ee;
-
-    padding:9px;
-
-    min-width:145px;
-
-    vertical-align:top;
-
-    text-align:center;
-
-}
-
-td.time {
-
-    background:#f1f5f9;
-
-    font-weight:bold;
-
-}
-
-
-/* SUBJECT */
-
-.subject {
-
-    display:block;
-
-    background:#eff6ff;
-
-    color:#1e3a8a;
-
-    border-left:
-    4px solid #2563eb;
-
-    padding:7px;
-
-    margin:4px 0;
-
-    border-radius:6px;
-
-    text-align:left;
-
-    font-size:13px;
-
-    font-weight:600;
-
-}
-
-
-/* EMPTY */
 
 .empty {
-
     color:#94a3b8;
-
 }
-
-
-/* PRINT */
-
-@media print {
-
-    .top-buttons {
-
-        display:none;
-
-    }
-
-    .faculty {
-
-        page-break-after:always;
-
-    }
-
-    body {
-
-        background:white;
-
-    }
-
-}
-
 </style>
-
 </head>
-
 
 <body>
 
+<div class="navbar">
 
-<div class="header">
+<div class="logo">
+🎓 SGB COLLEGE
+</div>
 
-<h1>
-📚 SGB COLLEGE
-</h1>
-
-<p>
-MASTER CLASS TIMETABLE
-</p>
+<div class="nav">
+<a href="/">⌂ Home</a>
+<a href="/timetable">📅 Timetable</a>
+<a href="/attendance">☑ Attendance</a>
+<a href="/reports">📊 Reports</a>
+</div>
 
 </div>
 
 
 <div class="container">
 
+<div class="box no-print">
 
-<div class="top-buttons">
-
-<a
-href="/"
-class="btn back"
->
-← Back to Home
+<a href="/" class="btn gray">
+← Home
 </a>
-
 
 <button
 onclick="window.print()"
-class="btn print"
->
+class="btn green">
 🖨 Print All
 </button>
 
@@ -1686,32 +1315,19 @@ class="btn print"
 
 {% for faculty in faculties %}
 
-
 <div class="faculty">
 
-
-<div class="faculty-header">
-
-<h2>
-{{ faculty }}
-</h2>
-
+<div class="faculty-title">
+<h2>{{ faculty }}</h2>
 </div>
 
 
 {% for year in years %}
 
-
 {% if year in timetable.get(faculty,{}) %}
 
-
-<div class="year">
-
-
-<div class="year-header">
-
+<div class="year-title">
 {{ year }}
-
 </div>
 
 
@@ -1726,24 +1342,17 @@ class="btn print"
 
 <table>
 
-
 <thead>
 
 <tr>
 
-<th class="time">
-TIME
-</th>
-
+<th>TIME</th>
 
 {% for day in days %}
 
-<th>
-{{ day }}
-</th>
+<th>{{ day }}</th>
 
 {% endfor %}
-
 
 </tr>
 
@@ -1752,71 +1361,53 @@ TIME
 
 <tbody>
 
-
 {% for slot in times %}
-
 
 <tr>
 
-
 <td class="time">
-
 {{ slot }}
-
 </td>
 
 
 {% for day in days %}
 
-
 <td>
 
-
 {% set subjects =
-    get_subjects(
-        timetable,
-        faculty,
-        year,
-        day,
-        slot
-    )
+get_subjects(
+    timetable,
+    faculty,
+    year,
+    day,
+    slot
+)
 %}
 
 
 {% if subjects %}
 
-
 {% for subject in subjects %}
 
 <span class="subject">
-
 {{ subject }}
-
 </span>
 
 {% endfor %}
-
 
 {% else %}
 
-<span class="empty">
-—
-</span>
+<span class="empty">—</span>
 
 {% endif %}
 
-
 </td>
 
-
 {% endfor %}
-
 
 </tr>
 
-
 {% endfor %}
-
 
 </tbody>
 
@@ -1824,34 +1415,22 @@ TIME
 
 </div>
 
-
-</div>
-
+<br>
 
 {% endif %}
 
-
 {% endfor %}
-
 
 </div>
 
-
 {% endfor %}
 
-
 </div>
-
 
 </body>
-
 </html>
 """
 
-
-# ============================================================
-# MASTER ROUTE
-# ============================================================
 
 @app.route("/master-timetable")
 def master_timetable():
@@ -1859,21 +1438,14 @@ def master_timetable():
     timetable = load_timetable()
 
     return render_template_string(
-
         MASTER_PAGE,
-
+        base_css=BASE_CSS,
         timetable=timetable,
-
         faculties=FACULTIES,
-
         years=YEARS,
-
         days=DAYS,
-
         get_all_time_slots=get_all_time_slots,
-
         get_subjects=get_subjects
-
     )
 
 
@@ -1884,245 +1456,114 @@ def master_timetable():
 TIMETABLE_PAGE = r"""
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <title>Daily Timetable</title>
-
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-
-body {
-
-    margin:0;
-
-    font-family:Arial;
-
-    background:#f1f5f9;
-
-}
-
-.header {
-
-    background:#172554;
-
-    color:white;
-
-    padding:25px;
-
-    text-align:center;
-
-}
-
-.container {
-
-    max-width:1200px;
-
-    margin:auto;
-
-    padding:20px;
-
-}
-
-.controls {
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:12px;
-
-    margin-bottom:20px;
-
-}
-
-select {
-
-    padding:12px;
-
-    width:100%;
-
-    margin-bottom:10px;
-
-}
-
-button {
-
-    padding:12px 20px;
-
-    background:#2563eb;
-
-    color:white;
-
-    border:0;
-
-    border-radius:8px;
-
-}
-
-.wrapper {
-
-    overflow-x:auto;
-
-}
-
-table {
-
-    width:100%;
-
-    min-width:800px;
-
-    border-collapse:collapse;
-
-    background:white;
-
-}
-
-th {
-
-    background:#1e3a8a;
-
-    color:white;
-
-    padding:13px;
-
-}
-
-td {
-
-    border:1px solid #ddd;
-
-    padding:10px;
-
-    text-align:center;
-
-}
-
-.time {
-
-    background:#f1f5f9;
-
-    font-weight:bold;
-
-}
-
-.subject {
-
-    display:block;
-
-    padding:7px;
-
-    background:#eff6ff;
-
-    margin:3px;
-
-    border-radius:5px;
-
-}
-
+{{ base_css }}
 </style>
-
 </head>
-
 
 <body>
 
+<div class="navbar">
 
-<div class="header">
+<div class="logo">🎓 SGB COLLEGE</div>
 
-<h1>
-📅 Daily Timetable
-</h1>
+<div class="nav">
+<a href="/">⌂ Home</a>
+<a href="/master-timetable">📋 Master</a>
+<a href="/attendance">☑ Attendance</a>
+<a href="/reports">📊 Reports</a>
+</div>
 
 </div>
 
 
 <div class="container">
 
+<div class="box">
 
-<div class="controls">
+<h1>📅 Daily Timetable</h1>
 
-<form method="GET">
+<form method="GET" class="controls">
+
+<div class="field">
+<label>Faculty</label>
 
 <select name="faculty">
 
 {% for f in faculties %}
 
-<option
-value="{{ f }}"
-{% if f == faculty %}
-selected
-{% endif %}
->
+<option value="{{ f }}"
+{% if f == faculty %}selected{% endif %}>
 {{ f }}
 </option>
 
 {% endfor %}
 
 </select>
+</div>
 
+
+<div class="field">
+<label>Year</label>
 
 <select name="year">
 
 {% for y in years %}
 
-<option
-value="{{ y }}"
-{% if y == year %}
-selected
-{% endif %}
->
+<option value="{{ y }}"
+{% if y == year %}selected{% endif %}>
 {{ y }}
 </option>
 
 {% endfor %}
 
 </select>
+</div>
 
+
+<div class="field">
+<label>Day</label>
 
 <select name="day">
 
 {% for d in days %}
 
-<option
-value="{{ d }}"
-{% if d == selected_day %}
-selected
-{% endif %}
->
+<option value="{{ d }}"
+{% if d == selected_day %}selected{% endif %}>
 {{ d }}
 </option>
 
 {% endfor %}
 
 </select>
+</div>
 
 
-<button>
-VIEW TIMETABLE
-</button>
+<button>VIEW</button>
 
 </form>
 
 </div>
 
 
-<div class="wrapper">
+<div class="box">
+
+<h2>
+{{ selected_day }} —
+{{ faculty }} —
+{{ year }}
+</h2>
+
+<div class="table-wrapper">
 
 <table>
 
 <tr>
-
 <th>TIME</th>
-
-<th>
-{{ selected_day }}
-</th>
-
+<th>{{ selected_day }}</th>
 </tr>
 
 
@@ -2150,16 +1591,15 @@ VIEW TIMETABLE
 
 {% endfor %}
 
-
 </table>
 
 </div>
 
+</div>
 
 </div>
 
 </body>
-
 </html>
 """
 
@@ -2181,9 +1621,8 @@ def timetable_page():
 
     selected_day = request.args.get(
         "day",
-        datetime.now().strftime("%A")
+        current_day_ist()
     )
-
 
     if faculty not in FACULTIES:
         faculty = "Science"
@@ -2194,41 +1633,29 @@ def timetable_page():
     if selected_day not in DAYS:
         selected_day = "Monday"
 
-
     data = (
         timetable
-        .get(faculty,{})
-        .get(year,{})
-        .get(selected_day,{})
+        .get(faculty, {})
+        .get(year, {})
+        .get(selected_day, {})
     )
-
 
     slots = sorted(
         data.keys(),
         key=time_sort_key
     )
 
-
     return render_template_string(
-
         TIMETABLE_PAGE,
-
+        base_css=BASE_CSS,
         faculties=FACULTIES,
-
         years=YEARS,
-
         days=DAYS,
-
         faculty=faculty,
-
         year=year,
-
         selected_day=selected_day,
-
         data=data,
-
         slots=slots
-
     )
 
 
@@ -2239,119 +1666,37 @@ def timetable_page():
 LOGIN_PAGE = r"""
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <title>Admin Login</title>
-
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+{{ base_css }}
 
-body {
-
-    margin:0;
-
-    background:#eef2ff;
-
-    font-family:Arial;
-
-}
-
-.box {
-
-    max-width:400px;
-
+.login-box {
+    max-width:420px;
     margin:80px auto;
-
-    background:white;
-
-    padding:30px;
-
-    border-radius:15px;
-
-    box-shadow:
-    0 5px 25px rgba(0,0,0,.1);
-
 }
-
-h1 {
-
-    text-align:center;
-
-}
-
-input {
-
-    width:100%;
-
-    padding:13px;
-
-    margin:8px 0;
-
-    border:1px solid #ccc;
-
-    border-radius:8px;
-
-    box-sizing:border-box;
-
-}
-
-button {
-
-    width:100%;
-
-    padding:13px;
-
-    margin-top:10px;
-
-    background:#2563eb;
-
-    color:white;
-
-    border:0;
-
-    border-radius:8px;
-
-    font-weight:bold;
-
-}
-
-.error {
-
-    color:#dc2626;
-
-    text-align:center;
-
-}
-
 </style>
-
 </head>
-
 
 <body>
 
+<div class="container">
 
-<div class="box">
+<div class="box login-box">
 
-<h1>
-🔐 Admin Access
+<h1 style="text-align:center">
+🔐 Admin Login
 </h1>
 
 
-{% with messages =
-    get_flashed_messages()
-%}
+{% with messages = get_flashed_messages() %}
 
 {% for message in messages %}
 
-<p class="error">
+<div class="flash">
 {{ message }}
-</p>
+</div>
 
 {% endfor %}
 
@@ -2360,38 +1705,58 @@ button {
 
 <form method="POST">
 
+<label>Username</label>
+
 <input
 type="text"
 name="username"
-placeholder="Username"
 required
 >
 
+
+<label style="margin-top:12px">
+Password
+</label>
 
 <input
 type="password"
 name="password"
-placeholder="Password"
 required
 >
 
 
-<button>
+<button
+style="width:100%;margin-top:15px;">
 LOGIN
 </button>
 
 </form>
 
 
+<p style="
+text-align:center;
+margin-top:20px;
+">
+
+<a href="/">
+← Back to Home
+</a>
+
+</p>
+
+</div>
+
 </div>
 
 </body>
-
 </html>
 """
 
 
-@app.route("/login", methods=["GET","POST"])
+@app.route(
+    "/login",
+    methods=["GET", "POST"]
+)
 def login():
 
     if request.method == "POST":
@@ -2399,37 +1764,40 @@ def login():
         username = request.form.get(
             "username",
             ""
-        )
+        ).strip()
 
         password = request.form.get(
             "password",
             ""
         )
 
-
         if (
             username == ADMIN_USERNAME
-            and
-            password == ADMIN_PASSWORD
+            and verify_admin_password(password)
         ):
 
-            session["admin_logged_in"] = True
+            session.clear()
 
+            session["admin_logged_in"] = True
             session["admin_username"] = username
 
-            return redirect(
-                request.args.get(
-                    "next",
-                    "/"
-                )
+            next_url = request.args.get(
+                "next",
+                "/"
             )
 
+            if not next_url.startswith("/"):
+                next_url = "/"
 
-        flash("Invalid username or password.")
+            return redirect(next_url)
 
+        flash(
+            "Invalid username or password."
+        )
 
     return render_template_string(
-        LOGIN_PAGE
+        LOGIN_PAGE,
+        base_css=BASE_CSS
     )
 
 
@@ -2452,174 +1820,82 @@ def logout():
 ATTENDANCE_PAGE = r"""
 <!DOCTYPE html>
 <html>
-
 <head>
-
 <title>Class Attendance</title>
-
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1"
->
-
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
+{{ base_css }}
 
-body {
-
-    margin:0;
-
-    font-family:Arial;
-
-    background:#f1f5f9;
-
+.action-form {
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+    justify-content:center;
 }
 
-.header {
-
-    background:#111827;
-
-    color:white;
-
-    padding:20px;
-
-    text-align:center;
-
+.action-form button {
+    padding:7px 10px;
+    font-size:11px;
 }
-
-.container {
-
-    max-width:1100px;
-
-    margin:auto;
-
-    padding:20px;
-
-}
-
-.box {
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:14px;
-
-    margin-bottom:20px;
-
-}
-
-select {
-
-    padding:11px;
-
-    margin:5px;
-
-}
-
-table {
-
-    width:100%;
-
-    border-collapse:collapse;
-
-}
-
-th {
-
-    background:#172554;
-
-    color:white;
-
-    padding:12px;
-
-}
-
-td {
-
-    border:1px solid #ddd;
-
-    padding:10px;
-
-    text-align:center;
-
-}
-
-.status {
-
-    font-weight:bold;
-
-}
-
-button {
-
-    padding:9px 14px;
-
-    border:0;
-
-    border-radius:7px;
-
-    cursor:pointer;
-
-}
-
-.taken {
-
-    background:#16a34a;
-
-    color:white;
-
-}
-
-.not {
-
-    background:#dc2626;
-
-    color:white;
-
-}
-
-.cancel {
-
-    background:#64748b;
-
-    color:white;
-
-}
-
 </style>
-
 </head>
-
 
 <body>
 
+<div class="navbar">
 
-<div class="header">
+<div class="logo">
+🎓 SGB COLLEGE
+</div>
 
-<h1>
-☑ Class Attendance
-</h1>
+<div class="nav">
+<a href="/">⌂ Home</a>
+<a href="/timetable">📅 Timetable</a>
+<a href="/master-timetable">📋 Master</a>
+<a href="/reports">📊 Reports</a>
+
+{% if session.get("admin_logged_in") %}
+<a href="/logout">Logout</a>
+{% else %}
+<a href="/login">🔐 Admin</a>
+{% endif %}
+
+</div>
 
 </div>
 
 
 <div class="container">
 
-
 <div class="box">
 
-<form method="GET">
+<h1>☑ Class Attendance</h1>
+
+{% with messages = get_flashed_messages() %}
+
+{% for message in messages %}
+
+<div class="flash">
+{{ message }}
+</div>
+
+{% endfor %}
+
+{% endwith %}
+
+
+<form method="GET" class="controls">
+
+<div class="field">
+
+<label>Faculty</label>
 
 <select name="faculty">
 
 {% for f in faculties %}
 
-<option
-value="{{ f }}"
-{% if f == faculty %}
-selected
-{% endif %}
->
+<option value="{{ f }}"
+{% if f == faculty %}selected{% endif %}>
 {{ f }}
 </option>
 
@@ -2627,17 +1903,19 @@ selected
 
 </select>
 
+</div>
+
+
+<div class="field">
+
+<label>Year</label>
 
 <select name="year">
 
 {% for y in years %}
 
-<option
-value="{{ y }}"
-{% if y == year %}
-selected
-{% endif %}
->
+<option value="{{ y }}"
+{% if y == year %}selected{% endif %}>
 {{ y }}
 </option>
 
@@ -2645,17 +1923,19 @@ selected
 
 </select>
 
+</div>
+
+
+<div class="field">
+
+<label>Day</label>
 
 <select name="day">
 
 {% for d in days %}
 
-<option
-value="{{ d }}"
-{% if d == selected_day %}
-selected
-{% endif %}
->
+<option value="{{ d }}"
+{% if d == selected_day %}selected{% endif %}>
 {{ d }}
 </option>
 
@@ -2663,10 +1943,12 @@ selected
 
 </select>
 
+</div>
 
-<button>
-VIEW
-</button>
+
+<div>
+<button>VIEW</button>
+</div>
 
 </form>
 
@@ -2676,20 +1958,41 @@ VIEW
 <div class="box">
 
 <h2>
-{{ selected_day }} - {{ faculty }} - {{ year }}
+{{ selected_day }} —
+{{ faculty }} —
+{{ year }}
 </h2>
 
+<p>
+Attendance date:
+<strong>{{ attendance_date }}</strong>
+</p>
+
+
+{% if not session.get("admin_logged_in") %}
+
+<div style="
+background:#fef3c7;
+color:#92400e;
+padding:12px;
+border-radius:8px;
+margin-bottom:15px;
+">
+🔒 Login as admin to mark or edit attendance.
+</div>
+
+{% endif %}
+
+
+<div class="table-wrapper">
 
 <table>
 
 <tr>
 
 <th>TIME</th>
-
 <th>LECTURE</th>
-
 <th>STATUS</th>
-
 <th>ACTION</th>
 
 </tr>
@@ -2699,36 +2002,63 @@ VIEW
 
 <tr>
 
-<td>
+<td class="time">
 {{ item.time }}
 </td>
+
 
 <td>
 
 {% for subject in item.subjects %}
 
-<div>
+<span class="subject">
 {{ subject }}
-</div>
+</span>
 
 {% endfor %}
 
 </td>
 
 
-<td class="status">
+<td>
 
-{{ item.status }}
+{% if item.status == "taken" %}
+
+<span class="badge taken">
+Taken
+</span>
+
+{% elif item.status == "not_taken" %}
+
+<span class="badge not_taken">
+Not Taken
+</span>
+
+{% elif item.status == "cancelled" %}
+
+<span class="badge cancelled">
+Cancelled
+</span>
+
+{% else %}
+
+<span class="badge unmarked">
+Not Marked
+</span>
+
+{% endif %}
 
 </td>
 
 
 <td>
 
+{% if session.get("admin_logged_in") %}
 
 <form
 method="POST"
 action="/attendance/mark"
+class="action-form"
 >
 
 <input
@@ -2755,7 +2085,6 @@ name="time_slot"
 value="{{ item.time }}"
 >
 
-
 <input
 type="hidden"
 name="lecture"
@@ -2766,7 +2095,7 @@ value="{{ item.subject_text }}"
 <button
 name="status"
 value="taken"
-class="taken"
+style="background:#16a34a;"
 >
 ✓ Taken
 </button>
@@ -2775,7 +2104,7 @@ class="taken"
 <button
 name="status"
 value="not_taken"
-class="not"
+style="background:#dc2626;"
 >
 ✗ Not Taken
 </button>
@@ -2784,14 +2113,21 @@ class="not"
 <button
 name="status"
 value="cancelled"
-class="cancel"
+style="background:#64748b;"
 >
 Cancelled
 </button>
 
-
 </form>
 
+{% else %}
+
+<a href="/login"
+class="btn small">
+Admin Login
+</a>
+
+{% endif %}
 
 </td>
 
@@ -2799,16 +2135,15 @@ Cancelled
 
 {% endfor %}
 
-
 </table>
 
 </div>
 
+</div>
 
 </div>
 
 </body>
-
 </html>
 """
 
@@ -2830,9 +2165,8 @@ def attendance():
 
     selected_day = request.args.get(
         "day",
-        datetime.now().strftime("%A")
+        current_day_ist()
     )
-
 
     if faculty not in FACULTIES:
         faculty = "Science"
@@ -2843,20 +2177,20 @@ def attendance():
     if selected_day not in DAYS:
         selected_day = "Monday"
 
-
     data = (
         timetable
-        .get(faculty,{})
-        .get(year,{})
-        .get(selected_day,{})
+        .get(faculty, {})
+        .get(year, {})
+        .get(selected_day, {})
     )
-
 
     slots = sorted(
         data.keys(),
         key=time_sort_key
     )
 
+    # Attendance page always shows today's date.
+    attendance_date = today_string()
 
     conn = get_db()
 
@@ -2868,14 +2202,13 @@ def attendance():
         AND year=?
         AND day=?
     """, (
-        str(date.today()),
+        attendance_date,
         faculty,
         year,
         selected_day
     )).fetchall()
 
     conn.close()
-
 
     status_map = {}
 
@@ -2885,9 +2218,7 @@ def attendance():
             row["time_slot"]
         ] = row["status"]
 
-
     lectures = []
-
 
     for slot in slots:
 
@@ -2896,48 +2227,43 @@ def attendance():
             []
         )
 
+        if isinstance(subjects, str):
+            subjects = [subjects]
+
         lectures.append({
 
-            "time":slot,
+            "time": slot,
 
-            "subjects":subjects,
+            "subjects": subjects,
 
-            "subject_text":" | ".join(
-                subjects
+            "subject_text": " | ".join(
+                str(x)
+                for x in subjects
             ),
 
-            "status":
-                status_map.get(
-                    slot,
-                    "Not Marked"
-                )
+            "status": status_map.get(
+                slot,
+                ""
+            )
 
         })
 
-
     return render_template_string(
-
         ATTENDANCE_PAGE,
-
+        base_css=BASE_CSS,
         faculties=FACULTIES,
-
         years=YEARS,
-
         days=DAYS,
-
         faculty=faculty,
-
         year=year,
-
         selected_day=selected_day,
-
-        lectures=lectures
-
+        lectures=lectures,
+        attendance_date=attendance_date
     )
 
 
 # ============================================================
-# MARK ATTENDANCE
+# MARK / UPDATE ATTENDANCE
 # ============================================================
 
 @app.route(
@@ -2948,43 +2274,59 @@ def attendance():
 def mark_attendance():
 
     faculty = request.form.get(
-        "faculty"
+        "faculty",
+        ""
     )
 
     year = request.form.get(
-        "year"
+        "year",
+        ""
     )
 
     day = request.form.get(
-        "day"
+        "day",
+        ""
     )
 
     time_slot = request.form.get(
-        "time_slot"
+        "time_slot",
+        ""
     )
 
     lecture = request.form.get(
-        "lecture"
+        "lecture",
+        ""
     )
 
     status = request.form.get(
-        "status"
+        "status",
+        ""
     )
 
+    if faculty not in FACULTIES:
+        return redirect("/attendance")
 
-    allowed = [
-        "taken",
-        "not_taken",
-        "cancelled"
-    ]
+    if year not in YEARS:
+        return redirect("/attendance")
 
-    if status not in allowed:
+    if day not in DAYS:
+        return redirect("/attendance")
 
+    if status not in STATUS_LABELS:
         status = "not_taken"
 
+    attendance_date = today_string()
+
+    marked_at = now_ist().strftime(
+        "%Y-%m-%d %H:%M:%S"
+    )
+
+    marked_by = session.get(
+        "admin_username",
+        ADMIN_USERNAME
+    )
 
     conn = get_db()
-
 
     existing = conn.execute("""
         SELECT id
@@ -2995,36 +2337,29 @@ def mark_attendance():
         AND day=?
         AND time_slot=?
     """, (
-        str(date.today()),
+        attendance_date,
         faculty,
         year,
         day,
         time_slot
     )).fetchone()
 
-
-    now = datetime.now().strftime(
-        "%Y-%m-%d %H:%M:%S"
-    )
-
-
     if existing:
 
         conn.execute("""
             UPDATE attendance
-            SET status=?,
-                lecture=?,
+
+            SET lecture=?,
+                status=?,
                 marked_by=?,
                 marked_at=?
+
             WHERE id=?
         """, (
-            status,
             lecture,
-            session.get(
-                "admin_username",
-                "admin"
-            ),
-            now,
+            status,
+            marked_by,
+            marked_at,
             existing["id"]
         ))
 
@@ -3043,27 +2378,27 @@ def mark_attendance():
                 marked_by,
                 marked_at
             )
-            VALUES (?,?,?,?,?,?,?,?,?)
+
+            VALUES
+            (?,?,?,?,?,?,?,?,?)
         """, (
-            str(date.today()),
+            attendance_date,
             faculty,
             year,
             day,
             time_slot,
             lecture,
             status,
-            session.get(
-                "admin_username",
-                "admin"
-            ),
-            now
+            marked_by,
+            marked_at
         ))
 
-
     conn.commit()
-
     conn.close()
 
+    flash(
+        f"Attendance updated: {STATUS_LABELS[status]}"
+    )
 
     return redirect(
         url_for(
@@ -3076,7 +2411,178 @@ def mark_attendance():
 
 
 # ============================================================
-# REPORTS
+# REPORT HELPERS
+# ============================================================
+
+def safe_date(value, default_value):
+
+    try:
+        return datetime.strptime(
+            value,
+            "%Y-%m-%d"
+        ).date()
+    except Exception:
+        return default_value
+
+
+def build_report_filters():
+
+    today = today_ist()
+
+    default_from = today.replace(
+        day=1
+    )
+
+    from_date = safe_date(
+        request.args.get(
+            "from_date",
+            ""
+        ),
+        default_from
+    )
+
+    to_date = safe_date(
+        request.args.get(
+            "to_date",
+            ""
+        ),
+        today
+    )
+
+    if from_date > to_date:
+        from_date, to_date = (
+            to_date,
+            from_date
+        )
+
+    faculty = request.args.get(
+        "faculty",
+        ""
+    ).strip()
+
+    year = request.args.get(
+        "year",
+        ""
+    ).strip()
+
+    day = request.args.get(
+        "day",
+        ""
+    ).strip()
+
+    subject = request.args.get(
+        "subject",
+        ""
+    ).strip()
+
+    status = request.args.get(
+        "status",
+        ""
+    ).strip()
+
+    if faculty not in FACULTIES:
+        faculty = ""
+
+    if year not in YEARS:
+        year = ""
+
+    if day not in DAYS:
+        day = ""
+
+    if status not in STATUS_LABELS:
+        status = ""
+
+    return {
+        "from_date": from_date,
+        "to_date": to_date,
+        "faculty": faculty,
+        "year": year,
+        "day": day,
+        "subject": subject,
+        "status": status
+    }
+
+
+def report_where_clause(filters):
+
+    conditions = [
+        "attendance_date BETWEEN ? AND ?"
+    ]
+
+    params = [
+        filters["from_date"].isoformat(),
+        filters["to_date"].isoformat()
+    ]
+
+    if filters["faculty"]:
+
+        conditions.append(
+            "faculty=?"
+        )
+
+        params.append(
+            filters["faculty"]
+        )
+
+    if filters["year"]:
+
+        conditions.append(
+            "year=?"
+        )
+
+        params.append(
+            filters["year"]
+        )
+
+    if filters["day"]:
+
+        conditions.append(
+            "day=?"
+        )
+
+        params.append(
+            filters["day"]
+        )
+
+    if filters["subject"]:
+
+        conditions.append(
+            "lecture LIKE ?"
+        )
+
+        params.append(
+            "%" + filters["subject"] + "%"
+        )
+
+    if filters["status"]:
+
+        conditions.append(
+            "status=?"
+        )
+
+        params.append(
+            filters["status"]
+        )
+
+    return (
+        " WHERE " + " AND ".join(conditions),
+        params
+    )
+
+
+def calculate_percentage(taken, total_valid):
+
+    if total_valid <= 0:
+        return 0.0
+
+    return round(
+        (taken / total_valid) * 100,
+        2
+    )
+
+
+# ============================================================
+# REPORT PAGE
 # ============================================================
 
 REPORT_PAGE = r"""
@@ -3087,82 +2593,46 @@ REPORT_PAGE = r"""
 
 <title>Attendance Reports</title>
 
-<meta
-name="viewport"
-content="width=device-width,initial-scale=1"
->
+<meta name="viewport"
+content="width=device-width,initial-scale=1">
 
 <style>
 
-body {
+{{ base_css }}
 
-    margin:0;
-
-    font-family:Arial;
-
-    background:#f1f5f9;
-
-}
-
-.header {
-
-    background:#172554;
-
+.report-header {
+    background:linear-gradient(135deg,#172554,#7c3aed);
     color:white;
-
     padding:25px;
-
-    text-align:center;
-
-}
-
-.container {
-
-    max-width:1200px;
-
-    margin:auto;
-
-    padding:20px;
-
-}
-
-.box {
-
-    background:white;
-
-    padding:20px;
-
-    border-radius:14px;
-
+    border-radius:15px;
     margin-bottom:20px;
-
 }
 
-table {
-
-    width:100%;
-
-    border-collapse:collapse;
-
+.percentage {
+    font-size:22px;
+    font-weight:bold;
 }
 
-th {
-
-    background:#1e3a8a;
-
-    color:white;
-
-    padding:12px;
-
+.progress {
+    height:9px;
+    background:#e2e8f0;
+    border-radius:20px;
+    overflow:hidden;
+    min-width:100px;
 }
 
-td {
+.progress-bar {
+    height:100%;
+    background:#16a34a;
+}
 
-    border:1px solid #ddd;
+@media print {
 
-    padding:10px;
-
-    text-align:center;
+    .report-filter,
+    .no-print,
+    .navbar {
+        display:none !important;
+    }
 
 }
 
@@ -3174,11 +2644,24 @@ td {
 <body>
 
 
-<div class="header">
+<div class="navbar">
 
-<h1>
-📊 Attendance Reports
-</h1>
+<div class="logo">
+🎓 SGB COLLEGE
+</div>
+
+<div class="nav">
+
+<a href="/">⌂ Home</a>
+<a href="/timetable">📅 Timetable</a>
+<a href="/master-timetable">📋 Master</a>
+<a href="/attendance">☑ Attendance</a>
+
+{% if session.get("admin_logged_in") %}
+<a href="/logout">Logout</a>
+{% endif %}
+
+</div>
 
 </div>
 
@@ -3186,20 +2669,289 @@ td {
 <div class="container">
 
 
+<div class="report-header">
+
+<h1>
+📊 Attendance Reports
+</h1>
+
+<p>
+Retrieve saved attendance anytime using filters.
+</p>
+
+<p>
+<strong>
+{{ filters.from_date }} → {{ filters.to_date }}
+</strong>
+</p>
+
+</div>
+
+
+<div class="box report-filter">
+
+<h2>🔎 Report Filters</h2>
+
+
+<form method="GET"
+class="controls">
+
+
+<div class="field">
+
+<label>From Date</label>
+
+<input
+type="date"
+name="from_date"
+value="{{ filters.from_date }}"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>To Date</label>
+
+<input
+type="date"
+name="to_date"
+value="{{ filters.to_date }}"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>Faculty</label>
+
+<select name="faculty">
+
+<option value="">All Faculties</option>
+
+{% for f in faculties %}
+
+<option value="{{ f }}"
+{% if filters.faculty == f %}
+selected
+{% endif %}>
+{{ f }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div class="field">
+
+<label>Year</label>
+
+<select name="year">
+
+<option value="">All Years</option>
+
+{% for y in years %}
+
+<option value="{{ y }}"
+{% if filters.year == y %}
+selected
+{% endif %}>
+{{ y }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div class="field">
+
+<label>Day</label>
+
+<select name="day">
+
+<option value="">All Days</option>
+
+{% for d in days %}
+
+<option value="{{ d }}"
+{% if filters.day == d %}
+selected
+{% endif %}>
+{{ d }}
+</option>
+
+{% endfor %}
+
+</select>
+
+</div>
+
+
+<div class="field">
+
+<label>Subject / Lecture</label>
+
+<input
+type="text"
+name="subject"
+placeholder="Search subject..."
+value="{{ filters.subject }}"
+>
+
+</div>
+
+
+<div class="field">
+
+<label>Status</label>
+
+<select name="status">
+
+<option value="">All Status</option>
+
+<option value="taken"
+{% if filters.status == "taken" %}
+selected
+{% endif %}>
+Taken
+</option>
+
+<option value="not_taken"
+{% if filters.status == "not_taken" %}
+selected
+{% endif %}>
+Not Taken
+</option>
+
+<option value="cancelled"
+{% if filters.status == "cancelled" %}
+selected
+{% endif %}>
+Cancelled
+</option>
+
+</select>
+
+</div>
+
+
+<div>
+
+<button>
+🔎 Generate Report
+</button>
+
+</div>
+
+</form>
+
+</div>
+
+
+<div class="box no-print">
+
+<strong>Export:</strong>
+
+<a
+href="{{ csv_url }}"
+class="btn green">
+⬇ Download CSV
+</a>
+
+<button
+onclick="window.print()"
+class="btn gray">
+🖨 Print
+</button>
+
+</div>
+
+
+<div class="stat-grid">
+
+<div class="stat">
+
+Total Records
+
+<strong>
+{{ stats.total }}
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+Taken
+
+<strong class="green-text">
+{{ stats.taken }}
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+Not Taken
+
+<strong class="red-text">
+{{ stats.not_taken }}
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+Cancelled
+
+<strong>
+{{ stats.cancelled }}
+</strong>
+
+</div>
+
+
+<div class="stat">
+
+Attendance %
+
+<strong class="purple-text">
+{{ stats.percentage }}%
+</strong>
+
+</div>
+
+</div>
+
+
 <div class="box">
 
 <h2>
-Attendance Summary
+📚 Subject-wise Summary
 </h2>
 
+
+{% if summary %}
+
+<div class="table-wrapper">
 
 <table>
 
 <tr>
 
-<th>Faculty</th>
+<th>Subject / Lecture</th>
 
-<th>Year</th>
+<th>Total</th>
 
 <th>Taken</th>
 
@@ -3207,7 +2959,7 @@ Attendance Summary
 
 <th>Cancelled</th>
 
-<th>Total</th>
+<th>Attendance %</th>
 
 </tr>
 
@@ -3217,18 +2969,20 @@ Attendance Summary
 <tr>
 
 <td>
-{{ row.faculty }}
+<strong>
+{{ row.subject }}
+</strong>
 </td>
 
 <td>
-{{ row.year }}
+{{ row.total }}
 </td>
 
-<td>
+<td class="green-text">
 {{ row.taken }}
 </td>
 
-<td>
+<td class="red-text">
 {{ row.not_taken }}
 </td>
 
@@ -3237,15 +2991,37 @@ Attendance Summary
 </td>
 
 <td>
-{{ row.total }}
+
+<div class="percentage">
+{{ row.percentage }}%
+</div>
+
+<div class="progress">
+
+<div
+class="progress-bar"
+style="width:{{ row.percentage }}%;">
+</div>
+
+</div>
+
 </td>
 
 </tr>
 
 {% endfor %}
 
-
 </table>
+
+</div>
+
+{% else %}
+
+<div class="empty">
+No attendance records found for these filters.
+</div>
+
+{% endif %}
 
 </div>
 
@@ -3253,32 +3029,36 @@ Attendance Summary
 <div class="box">
 
 <h2>
-Recent Attendance Data
+📋 Detailed Attendance Report
 </h2>
 
 
+{% if recent %}
+
+<div class="table-wrapper">
+
 <table>
+
+<thead>
 
 <tr>
 
 <th>Date</th>
-
-<th>Faculty</th>
-
-<th>Year</th>
-
 <th>Day</th>
-
+<th>Faculty</th>
+<th>Year</th>
 <th>Time</th>
-
-<th>Lecture</th>
-
+<th>Lecture / Subject</th>
 <th>Status</th>
-
 <th>Marked By</th>
+<th>Marked At</th>
 
 </tr>
 
+</thead>
+
+
+<tbody>
 
 {% for row in recent %}
 
@@ -3289,6 +3069,10 @@ Recent Attendance Data
 </td>
 
 <td>
+{{ row.day }}
+</td>
+
+<td>
 {{ row.faculty }}
 </td>
 
@@ -3296,32 +3080,63 @@ Recent Attendance Data
 {{ row.year }}
 </td>
 
-<td>
-{{ row.day }}
-</td>
-
-<td>
+<td class="time">
 {{ row.time_slot }}
 </td>
 
-<td>
+<td style="text-align:left;">
 {{ row.lecture }}
 </td>
 
 <td>
-{{ row.status }}
+
+{% if row.status == "taken" %}
+
+<span class="badge taken">
+Taken
+</span>
+
+{% elif row.status == "not_taken" %}
+
+<span class="badge not_taken">
+Not Taken
+</span>
+
+{% else %}
+
+<span class="badge cancelled">
+Cancelled
+</span>
+
+{% endif %}
+
 </td>
 
 <td>
-{{ row.marked_by }}
+{{ row.marked_by or "—" }}
+</td>
+
+<td>
+{{ row.marked_at or "—" }}
 </td>
 
 </tr>
 
 {% endfor %}
 
+</tbody>
 
 </table>
+
+</div>
+
+{% else %}
+
+<div class="empty">
+No records found.
+</div>
+
+{% endif %}
 
 </div>
 
@@ -3338,13 +3153,44 @@ Recent Attendance Data
 @admin_required
 def reports():
 
+    filters = build_report_filters()
+
+    where, params = report_where_clause(
+        filters
+    )
+
     conn = get_db()
 
 
-    summary = conn.execute("""
+    # --------------------------------------------------------
+    # Detailed records
+    # --------------------------------------------------------
+
+    recent = conn.execute(
+        """
+        SELECT *
+        FROM attendance
+        """
+        + where +
+        """
+        ORDER BY attendance_date DESC,
+                 time_slot ASC,
+                 faculty ASC,
+                 year ASC
+        """,
+        params
+    ).fetchall()
+
+
+    # --------------------------------------------------------
+    # Overall stats
+    # --------------------------------------------------------
+
+    stats_row = conn.execute(
+        """
         SELECT
-            faculty,
-            year,
+
+            COUNT(*) AS total,
 
             SUM(
                 CASE
@@ -3365,37 +3211,262 @@ def reports():
                 WHEN status='cancelled'
                 THEN 1 ELSE 0
                 END
-            ) AS cancelled,
-
-            COUNT(*) AS total
+            ) AS cancelled
 
         FROM attendance
+        """
+        + where,
+        params
+    ).fetchone()
 
-        GROUP BY faculty, year
 
-        ORDER BY faculty, year
-    """).fetchall()
+    total = stats_row["total"] or 0
+    taken = stats_row["taken"] or 0
+    not_taken = stats_row["not_taken"] or 0
+    cancelled = stats_row["cancelled"] or 0
+
+    # Cancelled lectures are excluded from attendance %
+    valid_lectures = (
+        taken + not_taken
+    )
+
+    percentage = calculate_percentage(
+        taken,
+        valid_lectures
+    )
 
 
-    recent = conn.execute("""
-        SELECT *
+    # --------------------------------------------------------
+    # Subject summary
+    # --------------------------------------------------------
+
+    summary_rows = conn.execute(
+        """
+        SELECT
+
+            lecture,
+
+            COUNT(*) AS total,
+
+            SUM(
+                CASE
+                WHEN status='taken'
+                THEN 1 ELSE 0
+                END
+            ) AS taken,
+
+            SUM(
+                CASE
+                WHEN status='not_taken'
+                THEN 1 ELSE 0
+                END
+            ) AS not_taken,
+
+            SUM(
+                CASE
+                WHEN status='cancelled'
+                THEN 1 ELSE 0
+                END
+            ) AS cancelled
+
         FROM attendance
-        ORDER BY id DESC
-        LIMIT 100
-    """).fetchall()
+        """
+        + where +
+        """
+        GROUP BY lecture
+        ORDER BY lecture
+        """,
+        params
+    ).fetchall()
+
+
+    summary = []
+
+    for row in summary_rows:
+
+        subject_taken = row["taken"] or 0
+        subject_not_taken = row["not_taken"] or 0
+
+        subject_valid = (
+            subject_taken
+            + subject_not_taken
+        )
+
+        summary.append({
+
+            "subject": row["lecture"],
+
+            "total": row["total"] or 0,
+
+            "taken": subject_taken,
+
+            "not_taken": subject_not_taken,
+
+            "cancelled": row["cancelled"] or 0,
+
+            "percentage":
+                calculate_percentage(
+                    subject_taken,
+                    subject_valid
+                )
+
+        })
 
 
     conn.close()
 
 
+    stats = {
+        "total": total,
+        "taken": taken,
+        "not_taken": not_taken,
+        "cancelled": cancelled,
+        "percentage": percentage
+    }
+
+
+    csv_query = request.query_string.decode(
+        "utf-8"
+    )
+
+    csv_url = (
+        url_for("export_report")
+        + ("?" + csv_query if csv_query else "")
+    )
+
+
     return render_template_string(
-
         REPORT_PAGE,
+        base_css=BASE_CSS,
+        faculties=FACULTIES,
+        years=YEARS,
+        days=DAYS,
+        filters={
+            "from_date":
+                filters["from_date"].isoformat(),
 
+            "to_date":
+                filters["to_date"].isoformat(),
+
+            "faculty":
+                filters["faculty"],
+
+            "year":
+                filters["year"],
+
+            "day":
+                filters["day"],
+
+            "subject":
+                filters["subject"],
+
+            "status":
+                filters["status"]
+        },
+        stats=stats,
         summary=summary,
+        recent=recent,
+        csv_url=csv_url
+    )
 
-        recent=recent
 
+# ============================================================
+# CSV EXPORT
+# ============================================================
+
+@app.route("/reports/export")
+@admin_required
+def export_report():
+
+    filters = build_report_filters()
+
+    where, params = report_where_clause(
+        filters
+    )
+
+    conn = get_db()
+
+    rows = conn.execute(
+        """
+        SELECT
+            attendance_date,
+            day,
+            faculty,
+            year,
+            time_slot,
+            lecture,
+            status,
+            marked_by,
+            marked_at
+
+        FROM attendance
+        """
+        + where +
+        """
+        ORDER BY attendance_date DESC,
+                 time_slot ASC,
+                 faculty ASC,
+                 year ASC
+        """,
+        params
+    ).fetchall()
+
+    conn.close()
+
+
+    output = io.StringIO()
+
+    writer = csv.writer(
+        output
+    )
+
+    writer.writerow([
+        "Date",
+        "Day",
+        "Faculty",
+        "Year",
+        "Time",
+        "Lecture / Subject",
+        "Status",
+        "Marked By",
+        "Marked At"
+    ])
+
+
+    for row in rows:
+
+        writer.writerow([
+            row["attendance_date"],
+            row["day"],
+            row["faculty"],
+            row["year"],
+            row["time_slot"],
+            row["lecture"],
+            STATUS_LABELS.get(
+                row["status"],
+                row["status"]
+            ),
+            row["marked_by"] or "",
+            row["marked_at"] or ""
+        ])
+
+
+    filename = (
+        "attendance_report_"
+        + filters["from_date"].isoformat()
+        + "_to_"
+        + filters["to_date"].isoformat()
+        + ".csv"
+    )
+
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition":
+                f'attachment; filename="{filename}"'
+        }
     )
 
 
@@ -3427,3 +3498,4 @@ if __name__ == "__main__":
         port=port,
         debug=False
     )
+```
