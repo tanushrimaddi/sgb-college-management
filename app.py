@@ -1141,6 +1141,19 @@ a {
     letter-spacing: 1px;
     margin-top: 2px;
 }
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.college-logo {
+    width: 48px;
+    height: 48px;
+    object-fit: contain;
+    background: white;
+    border-radius: 50%;
+}
 
 .nav-links {
     display: flex;
@@ -1631,14 +1644,24 @@ setInterval(reloadLiveLecture, 15000);
 <body>
 
 <nav class="navbar">
-    <a href="{{ url_for('home') }}">
+
+    <a href="{{ url_for('home') }}" class="brand">
+
+        <img
+            src="{{ url_for('static', filename='college-logo.png') }}"
+            alt="SGB College Logo"
+            class="college-logo"
+        >
+
         <div class="logo">
-            🎓 SGB COLLEGE
+            SGB COLLEGE
             <small>COLLEGE MANAGEMENT SYSTEM</small>
         </div>
+
     </a>
 
     <div class="nav-links">
+
         <a href="{{ url_for('home') }}">🏠 Dashboard</a>
         <a href="{{ url_for('master_timetable') }}">📚 All Classes</a>
         <a href="{{ url_for('timetable_page') }}">📅 Daily Timetable</a>
@@ -1652,9 +1675,10 @@ setInterval(reloadLiveLecture, 15000);
         {% else %}
             <a href="{{ url_for('login') }}">🔐 Admin Login</a>
         {% endif %}
-    </div>
-</nav>
 
+    </div>
+
+</nav>
 <div class="container">
 
 {% with messages = get_flashed_messages() %}
