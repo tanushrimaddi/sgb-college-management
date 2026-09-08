@@ -1919,12 +1919,12 @@ setInterval(reloadLiveLecture, 15000);
     <a href="{{ url_for('home') }}" class="brand">
         <img
             src="{{ url_for('static', filename='college-logo.png') }}"
-            alt="SGB College Logo"
+            alt="SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S Logo"
             class="college-logo"
         >
 
         <div class="logo">
-            SGB COLLEGE
+            SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S
             <small>COLLEGE MANAGEMENT SYSTEM</small>
         </div>
     </a>
