@@ -2036,7 +2036,7 @@ def home():
 
     content = r"""
 <div class="hero">
-    <h1>🎓 SGB College Dashboard</h1>
+    <h1>LOGO SHRI GURU BUDDHISWAMI MAHAVIDYALAYA</h1>
     <p>Timetable, live lecture and permanent attendance management</p>
     <div class="time" id="live-clock">
         India Time: {{ now_time }}
