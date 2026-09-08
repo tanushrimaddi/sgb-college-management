@@ -1593,27 +1593,28 @@ td {
 
 
 /* =========================
-   SGB SIDEBAR + COLORFUL TIMETABLE
+   SGB PROFESSIONAL SIDEBAR + DASHBOARD
    ========================= */
 .navbar {
     position: fixed;
     left: 0;
     top: 0;
-    width: 260px;
+    width: 255px;
     height: 100vh;
     min-height: 100vh;
-    padding: 24px 14px;
+    padding: 18px 12px;
     box-sizing: border-box;
-    background: linear-gradient(180deg, #0f172a 0%, #111827 55%, #172554 100%);
+    background: linear-gradient(180deg, #071a38 0%, #0b2450 55%, #102d63 100%);
     color: white;
     display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
-    gap: 22px;
+    gap: 14px;
     overflow-y: auto;
+    overflow-x: hidden;
     z-index: 1000;
-    box-shadow: 4px 0 20px rgba(15,23,42,.12);
+    box-shadow: 4px 0 22px rgba(15,23,42,.16);
 }
 
 .brand {
@@ -1621,40 +1622,46 @@ td {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 9px;
-    padding: 6px 5px 18px;
+    gap: 8px;
+    padding: 4px 4px 16px;
     text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,.18);
 }
 
 .college-logo {
-    width: 88px;
-    height: 88px;
+    width: 76px;
+    height: 76px;
     object-fit: contain;
     background: white;
     border-radius: 50%;
-    padding: 5px;
+    padding: 4px;
     box-shadow: 0 5px 18px rgba(0,0,0,.25);
 }
 
 .logo {
+    width: 100%;
+    box-sizing: border-box;
     font-weight: 900;
-    font-size: 21px;
+    font-size: 17px;
+    line-height: 1.25;
     text-align: center;
-    white-space: nowrap;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: #fff;
 }
 
 .logo small {
     display: block;
-    font-size: 10px;
+    font-size: 9px;
     color: #cbd5e1;
-    letter-spacing: 1.4px;
+    letter-spacing: 1px;
     margin-top: 5px;
 }
 
 .nav-links {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 5px;
     width: 100%;
 }
 
@@ -1663,113 +1670,233 @@ td {
     align-items: center;
     width: 100%;
     box-sizing: border-box;
-    padding: 13px 14px;
+    padding: 12px 13px;
     border-radius: 10px;
-    font-size: 15px;
-    font-weight: 700;
-    color: #e2e8f0;
+    font-size: 14px;
+    font-weight: 800;
+    color: #e5edf9;
     text-decoration: none;
-    transition: all .2s ease;
+    transition: all .18s ease;
 }
 
 .nav-links a:hover {
-    background: rgba(59,130,246,.28);
+    background: rgba(59,130,246,.30);
     color: white;
-    transform: translateX(3px);
+    transform: translateX(2px);
+}
+
+.nav-links a:first-child {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(37,99,235,.25);
 }
 
 .container {
-    width: calc(100% - 260px);
+    width: calc(100% - 255px);
     max-width: none;
-    margin-left: 260px;
+    margin-left: 255px;
     margin-right: 0;
-    padding: 28px 32px 50px;
+    padding: 28px 34px 55px;
     box-sizing: border-box;
+    background: #f4f7fc;
+    min-height: calc(100vh - 40px);
 }
 
 .footer {
-    margin-left: 260px;
+    margin-left: 255px;
+    background: #f4f7fc;
 }
 
-.hero h1 {
-    font-size: 32px;
+/* Dashboard hero */
+.hero.dashboard-hero {
+    min-height: 142px;
+    padding: 18px 24px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    background: linear-gradient(120deg, #087ff5 0%, #2d55ef 52%, #7737ef 100%);
+    box-shadow: 0 10px 28px rgba(37,99,235,.17);
+    position: relative;
+    overflow: hidden;
 }
 
-.section h2 {
-    font-size: 23px;
+.hero.dashboard-hero::after {
+    content: '';
+    position: absolute;
+    width: 270px;
+    height: 270px;
+    right: -90px;
+    top: -100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
 }
 
-.master-table th,
-.master-table td {
+.hero-logo {
+    width: 112px;
+    height: 112px;
+    flex: 0 0 112px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: white;
+    padding: 5px;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.hero.dashboard-hero h1 {
+    margin: 0 0 5px;
+    font-size: clamp(25px, 3vw, 39px);
+    line-height: 1.12;
+    letter-spacing: .2px;
+}
+
+.hero.dashboard-hero p {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+.hero.dashboard-hero .time {
+    margin: 0;
+    font-weight: 800;
+    font-size: 15px;
+}
+
+/* Dashboard filters */
+.dashboard-filters {
+    padding: 16px;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 5px 18px rgba(15,23,42,.06);
+    margin-bottom: 18px;
+}
+
+.dashboard-filters .filter-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+.dashboard-filters select {
+    height: 42px;
     font-size: 14px;
+    font-weight: 600;
 }
 
-.master-table th {
-    font-size: 15px;
-    font-weight: 900;
+/* KPI cards */
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
-.slot-cell {
-    font-size: 15px !important;
+.dashboard-stat {
+    background: #fff;
+    border-radius: 16px;
+    padding: 17px 16px;
+    min-height: 92px;
+    box-sizing: border-box;
+    box-shadow: 0 5px 18px rgba(15,23,42,.06);
+    border: 1px solid #edf1f7;
+    position: relative;
+    overflow: hidden;
 }
 
-.lecture-cell {
-    padding: 12px;
-    border: 0;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    box-shadow: 0 2px 7px rgba(15,23,42,.10);
-    color: #172033;
+.dashboard-stat::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #2563eb;
 }
 
-.lecture-cell strong {
-    font-size: 16px;
-    line-height: 1.25;
+.dashboard-stat.green-card::before { background: #16a34a; }
+.dashboard-stat.red-card::before { background: #dc2626; }
+.dashboard-stat.orange-card::before { background: #f97316; }
+.dashboard-stat.purple-card::before { background: #7c3aed; }
+
+.dashboard-stat .stat-title {
+    font-size: 10px;
+    letter-spacing: .3px;
 }
 
-.lecture-cell .meta {
-    font-size: 13px;
-    margin-top: 5px;
-    color: #334155;
+.dashboard-stat .stat-value {
+    font-size: 25px;
+    margin-top: 10px;
 }
 
-/* Different colours for different timetable boxes */
-.subject-color-0 { background: #dbeafe; border-left: 5px solid #2563eb; }
-.subject-color-1 { background: #dcfce7; border-left: 5px solid #16a34a; }
-.subject-color-2 { background: #fef3c7; border-left: 5px solid #d97706; }
-.subject-color-3 { background: #fce7f3; border-left: 5px solid #db2777; }
-.subject-color-4 { background: #ede9fe; border-left: 5px solid #7c3aed; }
-.subject-color-5 { background: #cffafe; border-left: 5px solid #0891b2; }
-.subject-color-6 { background: #ffedd5; border-left: 5px solid #ea580c; }
-.subject-color-7 { background: #e0e7ff; border-left: 5px solid #4f46e5; }
-
-.current-cell {
-    outline: 3px solid #22c55e;
-    outline-offset: 1px;
+/* Live sections */
+.dashboard-section {
+    background: white;
+    border-radius: 17px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 5px 18px rgba(15,23,42,.06);
+    border: 1px solid #edf1f7;
 }
 
-.daily-timetable-table th,
-.daily-timetable-table td {
-    font-size: 15px;
+.dashboard-section .report-title h2 {
+    margin: 0;
+    font-size: 21px;
 }
 
-.daily-timetable-table td strong {
-    font-size: 16px;
+.dashboard-section .lecture {
+    margin-top: 13px;
+    margin-bottom: 0;
+    padding: 15px;
+    border-radius: 13px;
 }
 
-.subject-badge {
+.live-dot {
+    width: 13px;
+    height: 13px;
     display: inline-block;
-    padding: 8px 11px;
-    border-radius: 9px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 5px #dcfce7;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.quick-action {
+    display: block;
+    text-decoration: none;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 13px;
+    padding: 14px;
+    color: #172033;
     font-weight: 900;
-    font-size: 15px;
+    transition: .18s ease;
+}
+
+.quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15,23,42,.08);
+}
+
+@media (max-width: 1200px) {
+    .dashboard-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 @media (max-width: 900px) and (min-width: 701px) {
     .navbar { width: 220px; }
     .container { width: calc(100% - 220px); margin-left: 220px; padding: 22px; }
     .footer { margin-left: 220px; }
-    .nav-links a { font-size: 14px; padding: 11px 10px; }
+    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero-logo { width: 88px; height: 88px; flex-basis: 88px; }
 }
 
 @media (max-width: 700px) {
@@ -1778,27 +1905,14 @@ td {
         width: 100%;
         height: auto;
         min-height: auto;
-        padding: 15px;
+        padding: 12px;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
 
-    .brand {
-        flex-direction: row;
-        justify-content: flex-start;
-        padding: 4px;
-    }
-
-    .college-logo {
-        width: 58px;
-        height: 58px;
-    }
-
-    .logo {
-        font-size: 18px;
-        text-align: left;
-    }
-
+    .brand { flex-direction: row; justify-content: flex-start; padding: 3px 5px 10px; }
+    .college-logo { width: 55px; height: 55px; }
+    .logo { text-align: left; font-size: 15px; }
     .logo small { font-size: 8px; }
 
     .nav-links {
@@ -1807,23 +1921,21 @@ td {
         overflow-x: visible;
     }
 
-    .nav-links a {
-        width: auto;
-        font-size: 13px;
-        padding: 10px;
-    }
-
-    .container {
-        width: 96%;
-        margin-left: auto;
-        margin-right: auto;
-        padding: 18px 0 35px;
-    }
-
+    .nav-links a { width: auto; font-size: 12px; padding: 9px 10px; }
+    .container { width: 96%; margin-left: auto; margin-right: auto; padding: 15px 0 35px; }
     .footer { margin-left: 0; }
-    .hero h1 { font-size: 25px; }
-}
 
+    .hero.dashboard-hero { align-items: flex-start; padding: 18px; gap: 13px; }
+    .hero-logo { width: 72px; height: 72px; flex-basis: 72px; }
+    .hero.dashboard-hero h1 { font-size: 23px; }
+    .hero.dashboard-hero p { font-size: 13px; }
+    .hero.dashboard-hero .time { font-size: 12px; }
+
+    .dashboard-filters .filter-grid { grid-template-columns: 1fr; }
+    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-stat { min-height: 86px; padding: 14px; }
+    .quick-actions { grid-template-columns: 1fr; }
+}
 </style>
 
 <script>
@@ -1919,12 +2031,12 @@ setInterval(reloadLiveLecture, 15000);
     <a href="{{ url_for('home') }}" class="brand">
         <img
             src="{{ url_for('static', filename='college-logo.png') }}"
-            alt="SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S Logo"
+            alt="SGB College Logo"
             class="college-logo"
         >
 
         <div class="logo">
-            SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S
+            SGB COLLEGE
             <small>COLLEGE MANAGEMENT SYSTEM</small>
         </div>
     </a>
@@ -2035,105 +2147,82 @@ def home():
     stats = attendance_stats(records_today)
 
     content = r"""
-<div class="hero">
-    <h1>LOGO SHRI GURU BUDDHISWAMI MAHAVIDYALAYA</h1>
-    <p>Timetable, live lecture and permanent attendance management</p>
-    <div class="time" id="live-clock">
-        India Time: {{ now_time }}
+<div class="hero dashboard-hero">
+    <img src="{{ url_for('static', filename='college-logo.png') }}"
+         alt="College Logo" class="hero-logo">
+    <div class="hero-copy">
+        <h1>SHRI GURU BUDDHISWAMI MAHAVIDYALAYA</h1>
+        <p>Timetable, live lecture and permanent attendance management</p>
+        <div class="time" id="live-clock">India Time: {{ now_time }}</div>
     </div>
 </div>
 
-<form class="filters" method="get">
+<form class="dashboard-filters" method="get">
     <div class="filter-grid">
         <div>
             <label>Faculty</label>
             <select name="faculty" onchange="this.form.submit()">
                 {% for f in faculties %}
-                    <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
-                        {{ f }}
-                    </option>
+                    <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>{{ f }}</option>
                 {% endfor %}
             </select>
         </div>
-
         <div>
             <label>Year</label>
             <select name="year" onchange="this.form.submit()">
                 {% for y in years %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>
-                        {{ y }}
-                    </option>
+                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>{{ y }}</option>
                 {% endfor %}
             </select>
         </div>
     </div>
 </form>
 
-<div
-    id="live-data"
-    data-faculty="{{ faculty }}"
-    data-year="{{ year }}"
->
-</div>
+<div id="live-data" data-faculty="{{ faculty }}" data-year="{{ year }}"></div>
 
-<div class="cards">
-    <div class="stat">
+<div class="dashboard-cards">
+    <div class="dashboard-stat green-card">
         <div class="stat-title">Current Lecture</div>
-        <div class="stat-value green">
-            {% if current %}LIVE{% else %}—{% endif %}
-        </div>
+        <div class="stat-value green">{% if current %}LIVE{% else %}—{% endif %}</div>
     </div>
-
-    <div class="stat">
+    <div class="dashboard-stat">
         <div class="stat-title">Next Lecture</div>
-        <div class="stat-value blue">
-            {% if upcoming %}{{ upcoming[0].slot }}{% else %}—{% endif %}
-        </div>
+        <div class="stat-value blue">{% if upcoming %}{{ upcoming[0].slot }}{% else %}—{% endif %}</div>
     </div>
-
-    <div class="stat">
+    <div class="dashboard-stat purple-card">
         <div class="stat-title">Today's Lectures</div>
         <div class="stat-value purple">{{ today_rows|length }}</div>
     </div>
-
-    <div class="stat">
+    <div class="dashboard-stat green-card">
         <div class="stat-title">Taken Today</div>
         <div class="stat-value green">{{ stats.taken }}</div>
     </div>
-
-    <div class="stat">
+    <div class="dashboard-stat red-card">
         <div class="stat-title">Not Taken</div>
         <div class="stat-value red">{{ stats.not_taken }}</div>
     </div>
-
-    <div class="stat">
+    <div class="dashboard-stat orange-card">
         <div class="stat-title">Cancelled</div>
         <div class="stat-value orange">{{ stats.cancelled }}</div>
     </div>
-
-    <div class="stat">
+    <div class="dashboard-stat purple-card">
         <div class="stat-title">Attendance %</div>
-        <div class="stat-value blue">
-            {{ "%.1f"|format(stats.percentage) }}%
-        </div>
+        <div class="stat-value blue">{{ "%.1f"|format(stats.percentage) }}%</div>
     </div>
 </div>
 
-<div class="section">
+<div class="dashboard-section">
     <div class="report-title">
-        <h2>🟢 Current Lecture</h2>
+        <h2><span class="live-dot"></span>Current Lecture</h2>
         <span class="badge badge-live">AUTO UPDATE</span>
     </div>
-
     <div id="current-live-list">
         {% if current %}
             {% for row in current %}
                 <div class="lecture live">
                     <div class="time">{{ row.slot }}</div>
-
                     <div class="subject">
                         {{ row.subject }}
-
                         <div class="meta">
                             {{ row.faculty }} • {{ row.year }}
                             {% if row.class_name %} • {{ row.class_name }}{% endif %}
@@ -2141,7 +2230,6 @@ def home():
                             {% if row.room %} • Room {{ row.room }}{% endif %}
                         </div>
                     </div>
-
                     <span class="badge badge-live">LIVE NOW</span>
                 </div>
             {% endfor %}
@@ -2151,27 +2239,24 @@ def home():
     </div>
 </div>
 
-<div class="section">
+<div class="dashboard-section">
     <div class="report-title">
         <h2>⏭ Next Lecture</h2>
+        <a class="btn btn-blue" href="{{ url_for('timetable_page', faculty=faculty, year=year, day=today_name) }}">View Timetable</a>
     </div>
-
     <div id="next-live-list">
         {% if upcoming %}
             {% for row in upcoming[:3] %}
                 <div class="lecture next">
                     <div class="time">{{ row.slot }}</div>
-
                     <div class="subject">
                         {{ row.subject }}
-
                         <div class="meta">
                             {{ row.faculty }} • {{ row.year }}
                             {% if row.class_name %} • {{ row.class_name }}{% endif %}
                             {% if row.teacher %} • {{ row.teacher }}{% endif %}
                         </div>
                     </div>
-
                     <span class="badge badge-next">NEXT</span>
                 </div>
             {% endfor %}
@@ -2181,36 +2266,47 @@ def home():
     </div>
 </div>
 
-<div class="section">
+<div class="dashboard-section">
     <div class="report-title">
         <h2>📅 Today's Timetable</h2>
-        <a class="btn btn-blue" href="{{ url_for('timetable_page', faculty=faculty, year=year, day=today_name) }}">
-            Open Daily Timetable
-        </a>
+        <a class="btn btn-blue" href="{{ url_for('timetable_page', faculty=faculty, year=year, day=today_name) }}">Open Daily Timetable</a>
     </div>
-
     {% if today_rows %}
         {% for row in today_rows %}
             <div class="lecture {% if is_current_slot(row.slot, today_name) %}live{% endif %}">
                 <div class="time">{{ row.slot }}</div>
-
                 <div class="subject">
                     {{ row.subject }}
                     <div class="meta">
-                        {% if row.teacher %}Teacher: {{ row.teacher }}{% endif %}
-                        {% if row.class_name %} • Class: {{ row.class_name }}{% endif %}
-                        {% if row.room %} • Room: {{ row.room }}{% endif %}
+                        {{ row.faculty }} • {{ row.year }}
+                        {% if row.class_name %} • {{ row.class_name }}{% endif %}
+                        {% if row.teacher %} • {{ row.teacher }}{% endif %}
+                        {% if row.room %} • Room {{ row.room }}{% endif %}
                     </div>
                 </div>
-
                 {% if is_current_slot(row.slot, today_name) %}
-                    <span class="badge badge-live">LIVE</span>
+                    <span class="badge badge-live">LIVE NOW</span>
+                {% else %}
+                    <span class="badge badge-none">SCHEDULED</span>
                 {% endif %}
             </div>
         {% endfor %}
     {% else %}
-        <div class="empty">No timetable available for today.</div>
+        <div class="empty">No timetable entries for today.</div>
     {% endif %}
+</div>
+
+<div class="dashboard-section">
+    <div class="report-title"><h2>⚡ Quick Access</h2></div>
+    <div class="quick-actions">
+        <a class="quick-action" href="{{ url_for('master_timetable') }}">📚 All Classes</a>
+        <a class="quick-action" href="{{ url_for('timetable_page', faculty=faculty, year=year, day=today_name) }}">📅 Daily Timetable</a>
+        {% if current_user_obj and current_user_obj.is_admin %}
+            <a class="quick-action" href="{{ url_for('attendance', faculty=faculty, year=year, day=today_name) }}">📝 Mark Attendance</a>
+        {% else %}
+            <a class="quick-action" href="{{ url_for('login') }}">🔐 Admin Login</a>
+        {% endif %}
+    </div>
 </div>
 """
 
