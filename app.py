@@ -1141,19 +1141,6 @@ a {
     letter-spacing: 1px;
     margin-top: 2px;
 }
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.college-logo {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    background: white;
-    border-radius: 50%;
-}
 
 .nav-links {
     display: flex;
@@ -1553,6 +1540,240 @@ td {
         flex: 1;
     }
 }
+
+
+/* =========================
+   SGB SIDEBAR + COLORFUL TIMETABLE
+   ========================= */
+.navbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    min-height: 100vh;
+    padding: 24px 14px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #0f172a 0%, #111827 55%, #172554 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 22px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 4px 0 20px rgba(15,23,42,.12);
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 6px 5px 18px;
+    text-decoration: none;
+}
+
+.college-logo {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    background: white;
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: 0 5px 18px rgba(0,0,0,.25);
+}
+
+.logo {
+    font-weight: 900;
+    font-size: 21px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.logo small {
+    display: block;
+    font-size: 10px;
+    color: #cbd5e1;
+    letter-spacing: 1.4px;
+    margin-top: 5px;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+}
+
+.nav-links a {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e2e8f0;
+    text-decoration: none;
+    transition: all .2s ease;
+}
+
+.nav-links a:hover {
+    background: rgba(59,130,246,.28);
+    color: white;
+    transform: translateX(3px);
+}
+
+.container {
+    width: calc(100% - 260px);
+    max-width: none;
+    margin-left: 260px;
+    margin-right: 0;
+    padding: 28px 32px 50px;
+    box-sizing: border-box;
+}
+
+.footer {
+    margin-left: 260px;
+}
+
+.hero h1 {
+    font-size: 32px;
+}
+
+.section h2 {
+    font-size: 23px;
+}
+
+.master-table th,
+.master-table td {
+    font-size: 14px;
+}
+
+.master-table th {
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.slot-cell {
+    font-size: 15px !important;
+}
+
+.lecture-cell {
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 7px rgba(15,23,42,.10);
+    color: #172033;
+}
+
+.lecture-cell strong {
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+.lecture-cell .meta {
+    font-size: 13px;
+    margin-top: 5px;
+    color: #334155;
+}
+
+/* Different colours for different timetable boxes */
+.subject-color-0 { background: #dbeafe; border-left: 5px solid #2563eb; }
+.subject-color-1 { background: #dcfce7; border-left: 5px solid #16a34a; }
+.subject-color-2 { background: #fef3c7; border-left: 5px solid #d97706; }
+.subject-color-3 { background: #fce7f3; border-left: 5px solid #db2777; }
+.subject-color-4 { background: #ede9fe; border-left: 5px solid #7c3aed; }
+.subject-color-5 { background: #cffafe; border-left: 5px solid #0891b2; }
+.subject-color-6 { background: #ffedd5; border-left: 5px solid #ea580c; }
+.subject-color-7 { background: #e0e7ff; border-left: 5px solid #4f46e5; }
+
+.current-cell {
+    outline: 3px solid #22c55e;
+    outline-offset: 1px;
+}
+
+.daily-timetable-table th,
+.daily-timetable-table td {
+    font-size: 15px;
+}
+
+.daily-timetable-table td strong {
+    font-size: 16px;
+}
+
+.subject-badge {
+    display: inline-block;
+    padding: 8px 11px;
+    border-radius: 9px;
+    font-weight: 900;
+    font-size: 15px;
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+    .navbar { width: 220px; }
+    .container { width: calc(100% - 220px); margin-left: 220px; padding: 22px; }
+    .footer { margin-left: 220px; }
+    .nav-links a { font-size: 14px; padding: 11px 10px; }
+}
+
+@media (max-width: 700px) {
+    .navbar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        padding: 15px;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .brand {
+        flex-direction: row;
+        justify-content: flex-start;
+        padding: 4px;
+    }
+
+    .college-logo {
+        width: 58px;
+        height: 58px;
+    }
+
+    .logo {
+        font-size: 18px;
+        text-align: left;
+    }
+
+    .logo small { font-size: 8px; }
+
+    .nav-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+
+    .nav-links a {
+        width: auto;
+        font-size: 13px;
+        padding: 10px;
+    }
+
+    .container {
+        width: 96%;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 18px 0 35px;
+    }
+
+    .footer { margin-left: 0; }
+    .hero h1 { font-size: 25px; }
+}
+
 </style>
 
 <script>
@@ -1646,7 +1867,6 @@ setInterval(reloadLiveLecture, 15000);
 <nav class="navbar">
 
     <a href="{{ url_for('home') }}" class="brand">
-
         <img
             src="{{ url_for('static', filename='college-logo.png') }}"
             alt="SGB College Logo"
@@ -1657,11 +1877,9 @@ setInterval(reloadLiveLecture, 15000);
             SGB COLLEGE
             <small>COLLEGE MANAGEMENT SYSTEM</small>
         </div>
-
     </a>
 
     <div class="nav-links">
-
         <a href="{{ url_for('home') }}">🏠 Dashboard</a>
         <a href="{{ url_for('master_timetable') }}">📚 All Classes</a>
         <a href="{{ url_for('timetable_page') }}">📅 Daily Timetable</a>
@@ -1671,14 +1889,14 @@ setInterval(reloadLiveLecture, 15000);
             <a href="{{ url_for('reports') }}">📊 Reports</a>
             <a href="{{ url_for('access_control') }}">👥 Users</a>
             <a href="{{ url_for('timetable_manage') }}">⚙ Manage Timetable</a>
-            <a href="{{ url_for('logout') }}">Logout</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
         {% else %}
             <a href="{{ url_for('login') }}">🔐 Admin Login</a>
         {% endif %}
-
     </div>
 
 </nav>
+
 <div class="container">
 
 {% with messages = get_flashed_messages() %}
@@ -2129,7 +2347,7 @@ def master_timetable():
                             {% for day in days %}
                                 <td>
                                     {% for row in matrix[slot][day] %}
-                                        <div class="lecture-cell {% if is_current_slot(row.slot, day) %}current-cell{% endif %}">
+                                        <div class="lecture-cell subject-color-{{ loop.index0 % 8 }} {% if is_current_slot(row.slot, day) %}current-cell{% endif %}">
                                             <strong>{{ row.subject }}</strong>
 
                                             <div class="meta">
@@ -2287,7 +2505,7 @@ def timetable_page():
 
     {% if rows %}
         <div class="table-wrap">
-            <table>
+            <table class="daily-timetable-table">
                 <thead>
                     <tr>
                         <th>Time</th>
@@ -2308,7 +2526,7 @@ def timetable_page():
                             <td>{{ row.faculty }}</td>
                             <td>{{ row.year }}</td>
                             <td>{{ row.class_name or "—" }}</td>
-                            <td><strong>{{ row.subject }}</strong></td>
+                            <td><span class="subject-badge subject-color-{{ loop.index0 % 8 }}">{{ row.subject }}</span></td>
                             <td>{{ row.teacher or "—" }}</td>
                             <td>{{ row.room or "—" }}</td>
                             <td>
