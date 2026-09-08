@@ -487,6 +487,14 @@ class Attendance(db.Model):
         nullable=True
     )
 
+    # Number of students present in this lecture.
+    # It is written once when attendance is marked and never updated.
+    present_count = db.Column(
+        db.Integer,
+        nullable=False,
+        default=0
+    )
+
     marked_at = db.Column(
         db.DateTime,
         default=now_ist_naive,
@@ -574,6 +582,13 @@ def migrate_legacy_schema():
         "attendance",
         "marked_by_user_id",
         "INTEGER"
+    )
+
+    # Attendance present-student count. Existing records receive 0.
+    add_column_if_missing(
+        "attendance",
+        "present_count",
+        "INTEGER NOT NULL DEFAULT 0"
     )
 
 
@@ -912,6 +927,25 @@ def attendance_status_for(
     return record.status if record else None
 
 
+def attendance_window_open(record_date, day, slot):
+    """Return True only while the lecture is actually running today (IST)."""
+    now = now_ist()
+
+    if record_date != now.date():
+        return False
+
+    if day != now.strftime("%A"):
+        return False
+
+    start, end = parse_slot(slot)
+
+    if start is None or end is None:
+        return False
+
+    current_minutes = now.hour * 60 + now.minute
+    return start <= current_minutes < end
+
+
 def attendance_query(
     faculty=None,
     year=None,
@@ -1087,231 +1121,135 @@ BASE_HTML = r"""
 
 <style>
 :root {
-    --bg: #f4f7fc;
-    --surface: #ffffff;
-    --surface-2: #f8faff;
+    --bg: #f5f7fb;
+    --card: #ffffff;
     --text: #172033;
-    --muted: #64748b;
-    --border: #e2e8f0;
-    --nav: #0b1220;
-    --nav-2: #111c33;
+    --muted: #667085;
+    --border: #e5e7eb;
+    --nav: #111827;
     --primary: #2563eb;
-    --primary-dark: #1d4ed8;
     --green: #16a34a;
     --red: #dc2626;
     --orange: #ea580c;
     --purple: #7c3aed;
-    --shadow: 0 10px 30px rgba(15, 23, 42, .07);
-    --shadow-sm: 0 4px 14px rgba(15, 23, 42, .06);
 }
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
-
 body {
     margin: 0;
-    font-family: Inter, "Segoe UI", Arial, sans-serif;
-    background:
-        radial-gradient(circle at 85% 5%, rgba(37,99,235,.08), transparent 25%),
-        radial-gradient(circle at 10% 90%, rgba(124,58,237,.06), transparent 28%),
-        var(--bg);
+    font-family: Inter, Arial, sans-serif;
+    background: var(--bg);
     color: var(--text);
-    font-size: 15px;
 }
 
-body::before {
-    content: "";
-    position: fixed;
-    inset: 0;
-    pointer-events: none;
-    opacity: .35;
-    background-image: linear-gradient(rgba(148,163,184,.045) 1px, transparent 1px),
-                      linear-gradient(90deg, rgba(148,163,184,.045) 1px, transparent 1px);
-    background-size: 28px 28px;
-    z-index: -1;
+a {
+    color: inherit;
+    text-decoration: none;
 }
 
-a { color: inherit; text-decoration: none; }
-
-/* =========================
-   PROFESSIONAL SIDEBAR
-   ========================= */
 .navbar {
-    position: fixed;
-    left: 0;
+    position: sticky;
     top: 0;
-    width: 268px;
-    height: 100vh;
-    min-height: 100vh;
-    padding: 24px 15px;
-    background: linear-gradient(180deg, #0b1220 0%, #101a2f 58%, #172554 100%);
+    z-index: 1000;
+    min-height: 64px;
+    padding: 10px 18px;
+    background: var(--nav);
     color: white;
     display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 22px;
-    overflow-y: auto;
-    z-index: 1000;
-    box-shadow: 8px 0 32px rgba(15,23,42,.16);
-    border-right: 1px solid rgba(255,255,255,.06);
-}
-
-.brand {
-    display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 10px;
-    padding: 8px 5px 22px;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(255,255,255,.10);
-}
-
-.college-logo {
-    width: 92px;
-    height: 92px;
-    object-fit: contain;
-    background: white;
-    border-radius: 50%;
-    padding: 5px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.30);
+    justify-content: space-between;
+    gap: 12px;
 }
 
 .logo {
     font-weight: 900;
-    font-size: 21px;
-    text-align: center;
+    font-size: 18px;
     white-space: nowrap;
-    letter-spacing: .3px;
 }
 
 .logo small {
     display: block;
-    font-size: 10px;
-    color: #aebbd0;
-    letter-spacing: 1.5px;
-    margin-top: 5px;
+    font-size: 9px;
+    color: #9ca3af;
+    letter-spacing: 1px;
+    margin-top: 2px;
 }
 
 .nav-links {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    width: 100%;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
 }
 
 .nav-links a {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 48px;
-    padding: 12px 15px;
-    border-radius: 12px;
-    font-size: 15px;
-    font-weight: 750;
-    color: #dbe5f4;
-    text-decoration: none;
-    transition: transform .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13px;
 }
 
 .nav-links a:hover {
-    background: linear-gradient(90deg, rgba(37,99,235,.92), rgba(79,70,229,.78));
-    color: white;
-    transform: translateX(4px);
-    box-shadow: 0 7px 18px rgba(37,99,235,.22);
+    background: #1f2937;
 }
 
-/* =========================
-   MAIN CONTENT
-   ========================= */
 .container {
-    width: calc(100% - 268px);
-    max-width: none;
-    margin-left: 268px;
-    margin-right: 0;
-    padding: 32px 38px 55px;
-}
-
-.footer {
-    margin-left: 268px;
+    width: min(1250px, 94%);
+    margin: auto;
+    padding: 20px 0 45px;
 }
 
 .hero {
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(135deg, #1d4ed8 0%, #4f46e5 55%, #7c3aed 100%);
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
     color: white;
-    padding: 30px 32px;
-    border-radius: 22px;
-    margin-bottom: 22px;
-    box-shadow: 0 16px 35px rgba(37,99,235,.18);
-}
-
-.hero::after {
-    content: "";
-    position: absolute;
-    width: 240px;
-    height: 240px;
-    right: -70px;
-    top: -90px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.10);
+    padding: 25px;
+    border-radius: 18px;
+    margin-bottom: 18px;
 }
 
 .hero h1 {
-    position: relative;
-    z-index: 1;
-    margin: 0 0 8px;
-    font-size: 34px;
-    letter-spacing: -.5px;
+    margin: 0 0 7px;
+    font-size: 28px;
 }
 
 .hero p {
-    position: relative;
-    z-index: 1;
     margin: 0;
-    opacity: .92;
-    font-size: 15px;
+    opacity: .9;
 }
 
 .hero .time {
     color: white;
     min-width: auto;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .card,
 .section,
 .filters,
 .stat {
-    background: rgba(255,255,255,.94);
-    border: 1px solid rgba(226,232,240,.9);
-    border-radius: 18px;
-    box-shadow: var(--shadow-sm);
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, .06);
 }
 
 .section {
-    padding: 22px;
-    margin-bottom: 20px;
+    padding: 18px;
+    margin-bottom: 18px;
 }
 
 .section h2 {
     margin-top: 0;
-    font-size: 24px;
-    letter-spacing: -.2px;
 }
 
 .filters {
-    padding: 18px;
-    margin-bottom: 20px;
+    padding: 16px;
+    margin-bottom: 18px;
 }
 
 .filter-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
 }
 
 label {
@@ -1319,45 +1257,28 @@ label {
     font-size: 12px;
     color: var(--muted);
     font-weight: 800;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
 }
 
 select,
 input {
     width: 100%;
-    padding: 12px 13px;
-    border: 1px solid #d7dfeb;
-    border-radius: 11px;
+    padding: 10px 11px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
     background: white;
-    color: var(--text);
-    font-size: 15px;
-    outline: none;
-    transition: border .18s ease, box-shadow .18s ease;
-}
-
-select:focus,
-input:focus {
-    border-color: #60a5fa;
-    box-shadow: 0 0 0 4px rgba(37,99,235,.10);
+    font-size: 14px;
 }
 
 button,
 .btn {
     display: inline-block;
     border: 0;
-    border-radius: 11px;
-    padding: 11px 15px;
+    border-radius: 9px;
+    padding: 10px 13px;
     cursor: pointer;
     font-weight: 800;
-    font-size: 14px;
-    transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
-}
-
-button:hover,
-.btn:hover {
-    transform: translateY(-1px);
-    filter: brightness(1.03);
-    box-shadow: 0 7px 16px rgba(15,23,42,.10);
+    font-size: 13px;
 }
 
 .btn-blue { background: var(--primary); color: white; }
@@ -1365,22 +1286,22 @@ button:hover,
 .btn-red { background: var(--red); color: white; }
 .btn-orange { background: var(--orange); color: white; }
 .btn-purple { background: var(--purple); color: white; }
-.btn-gray { background: #e8edf4; color: #172033; }
+.btn-gray { background: #e5e7eb; color: #172033; }
 
 .btn-small {
-    padding: 7px 10px;
-    font-size: 12px;
+    padding: 7px 9px;
+    font-size: 11px;
 }
 
 .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 11px;
+    margin-bottom: 18px;
 }
 
 .stat {
-    padding: 18px;
+    padding: 16px;
 }
 
 .stat-title {
@@ -1388,11 +1309,10 @@ button:hover,
     font-size: 11px;
     font-weight: 900;
     text-transform: uppercase;
-    letter-spacing: .7px;
 }
 
 .stat-value {
-    font-size: 28px;
+    font-size: 25px;
     font-weight: 900;
     margin-top: 7px;
 }
@@ -1403,24 +1323,19 @@ button:hover,
 .blue { color: var(--primary); }
 .purple { color: var(--purple); }
 
-/* =========================
-   LECTURE CARDS
-   ========================= */
 .lecture {
     border: 1px solid var(--border);
     border-left: 5px solid #94a3b8;
-    border-radius: 13px;
-    padding: 15px;
-    margin-bottom: 10px;
+    border-radius: 11px;
+    padding: 13px;
+    margin-bottom: 9px;
     display: flex;
     align-items: center;
-    gap: 14px;
-    background: white;
-    box-shadow: 0 3px 10px rgba(15,23,42,.04);
+    gap: 12px;
 }
 
 .lecture.live {
-    background: #ecfdf5;
+    background: #ecfdf3;
     border-left-color: var(--green);
 }
 
@@ -1430,30 +1345,28 @@ button:hover,
 }
 
 .time {
-    min-width: 135px;
+    min-width: 125px;
     font-weight: 900;
-    color: var(--primary-dark);
-    font-size: 15px;
+    color: var(--primary);
 }
 
 .subject {
     flex: 1;
     font-weight: 900;
-    font-size: 16px;
 }
 
 .meta {
     color: var(--muted);
-    font-size: 13px;
+    font-size: 12px;
     margin-top: 4px;
 }
 
 .badge {
     display: inline-block;
-    padding: 6px 10px;
+    padding: 5px 9px;
     border-radius: 30px;
     color: white;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 900;
     white-space: nowrap;
 }
@@ -1465,145 +1378,101 @@ button:hover,
 .badge-next { background: var(--primary); }
 .badge-none { background: #64748b; }
 
-/* =========================
-   TIMETABLE TABLE
-   ========================= */
 .table-wrap {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    border-radius: 14px;
 }
 
 table {
     width: 100%;
-    border-collapse: separate;
-    border-spacing: 0;
+    border-collapse: collapse;
     min-width: 760px;
 }
 
 th, td {
-    padding: 12px;
+    padding: 10px;
     border-bottom: 1px solid var(--border);
     text-align: left;
     vertical-align: top;
 }
 
 th {
-    background: #eef3fb;
-    color: #334155;
-    font-size: 13px;
-    font-weight: 900;
+    background: #f3f4f6;
+    font-size: 12px;
     position: sticky;
     top: 0;
     z-index: 2;
 }
 
-td { font-size: 14px; }
+td {
+    font-size: 13px;
+}
 
-.master-table th { text-align: center; }
-.master-table td { min-width: 160px; }
+.master-table th {
+    text-align: center;
+}
+
+.master-table td {
+    min-width: 150px;
+}
 
 .slot-cell {
-    background: #f3f6fb;
+    background: #f8fafc;
     font-weight: 900;
-    min-width: 135px !important;
-    color: #334155;
+    min-width: 125px !important;
 }
 
 .lecture-cell {
-    border-radius: 13px;
-    padding: 13px;
-    margin-bottom: 9px;
-    box-shadow: 0 4px 12px rgba(15,23,42,.08);
-    color: #172033;
-    border: 1px solid rgba(255,255,255,.75);
-    transition: transform .16s ease, box-shadow .16s ease;
-}
-
-.lecture-cell:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 9px 20px rgba(15,23,42,.11);
+    border-radius: 8px;
+    padding: 8px;
+    background: #f8fafc;
+    margin-bottom: 6px;
 }
 
 .lecture-cell strong {
     display: block;
-    font-size: 17px;
-    line-height: 1.25;
 }
-
-.lecture-cell .meta {
-    font-size: 13px;
-    margin-top: 6px;
-    color: #475569;
-}
-
-/* Subject colours */
-.subject-color-0 { background: linear-gradient(135deg,#dbeafe,#eff6ff); border-left: 5px solid #2563eb; }
-.subject-color-1 { background: linear-gradient(135deg,#dcfce7,#f0fdf4); border-left: 5px solid #16a34a; }
-.subject-color-2 { background: linear-gradient(135deg,#fef3c7,#fffbeb); border-left: 5px solid #d97706; }
-.subject-color-3 { background: linear-gradient(135deg,#fce7f3,#fdf2f8); border-left: 5px solid #db2777; }
-.subject-color-4 { background: linear-gradient(135deg,#ede9fe,#f5f3ff); border-left: 5px solid #7c3aed; }
-.subject-color-5 { background: linear-gradient(135deg,#cffafe,#ecfeff); border-left: 5px solid #0891b2; }
-.subject-color-6 { background: linear-gradient(135deg,#ffedd5,#fff7ed); border-left: 5px solid #ea580c; }
-.subject-color-7 { background: linear-gradient(135deg,#e0e7ff,#eef2ff); border-left: 5px solid #4f46e5; }
 
 .current-cell {
-    outline: 3px solid #22c55e;
-    outline-offset: 1px;
-}
-
-.daily-timetable-table th,
-.daily-timetable-table td {
-    font-size: 15px;
-}
-
-.daily-timetable-table td strong { font-size: 17px; }
-
-.subject-badge {
-    display: inline-block;
-    padding: 8px 12px;
-    border-radius: 9px;
-    font-weight: 900;
-    font-size: 15px;
+    background: #ecfdf3;
+    border: 1px solid #bbf7d0;
 }
 
 .progress {
-    height: 9px;
+    height: 8px;
     background: #e5e7eb;
     border-radius: 10px;
     overflow: hidden;
-    margin-top: 7px;
+    margin-top: 6px;
 }
 
 .progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, #16a34a, #22c55e);
+    background: var(--green);
 }
 
 .alert {
-    padding: 12px 15px;
-    border-radius: 11px;
-    margin-bottom: 15px;
+    padding: 11px 14px;
+    border-radius: 9px;
+    margin-bottom: 14px;
     background: #eff6ff;
     color: #1d4ed8;
-    border: 1px solid #bfdbfe;
 }
 
 .empty {
     text-align: center;
-    padding: 48px 15px;
+    padding: 40px 15px;
     color: var(--muted);
 }
 
 .login-box {
     max-width: 430px;
     margin: 50px auto;
-    padding: 28px;
+    padding: 25px;
     background: white;
-    border: 1px solid var(--border);
-    border-radius: 18px;
-    box-shadow: var(--shadow);
+    border-radius: 16px;
+    box-shadow: 0 3px 18px rgba(0,0,0,.08);
 }
 
 .footer {
@@ -1613,14 +1482,35 @@ td { font-size: 14px; }
     padding: 25px;
 }
 
+.attendance-locked,
+.attendance-disabled {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.attendance-locked {
+    background: #ecfdf5;
+    color: #047857;
+}
+
 .action-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 7px;
 }
 
-.inline-form { display: inline; }
-.print-only { display: none; }
+.inline-form {
+    display: inline;
+}
+
+.print-only {
+    display: none;
+}
 
 .report-title {
     display: flex;
@@ -1634,13 +1524,16 @@ td { font-size: 14px; }
     .navbar,
     .filters,
     .no-print,
-    .footer { display: none !important; }
+    .footer {
+        display: none !important;
+    }
 
-    body { background: white; }
+    body {
+        background: white;
+    }
 
     .container {
         width: 100%;
-        margin: 0;
         padding: 0;
     }
 
@@ -1651,14 +1544,231 @@ td { font-size: 14px; }
         border: 1px solid #ddd;
     }
 
-    .print-only { display: block; }
-    table { min-width: 0; }
+    .print-only {
+        display: block;
+    }
+
+    table {
+        min-width: 0;
+    }
 }
 
-@media (max-width: 1000px) and (min-width: 701px) {
-    .navbar { width: 225px; }
-    .container { width: calc(100% - 225px); margin-left: 225px; padding: 24px; }
-    .footer { margin-left: 225px; }
+@media (max-width: 700px) {
+    .navbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .nav-links {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .nav-links a {
+        white-space: nowrap;
+    }
+
+    .container {
+        width: 96%;
+    }
+
+    .hero h1 {
+        font-size: 23px;
+    }
+
+    .lecture {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .time {
+        min-width: auto;
+    }
+
+    .action-row .btn {
+        flex: 1;
+    }
+}
+
+
+/* =========================
+   SGB SIDEBAR + COLORFUL TIMETABLE
+   ========================= */
+.navbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 260px;
+    height: 100vh;
+    min-height: 100vh;
+    padding: 24px 14px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #0f172a 0%, #111827 55%, #172554 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 22px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 4px 0 20px rgba(15,23,42,.12);
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 6px 5px 18px;
+    text-decoration: none;
+}
+
+.college-logo {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
+    background: white;
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: 0 5px 18px rgba(0,0,0,.25);
+}
+
+.logo {
+    font-weight: 900;
+    font-size: 21px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.logo small {
+    display: block;
+    font-size: 10px;
+    color: #cbd5e1;
+    letter-spacing: 1.4px;
+    margin-top: 5px;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+}
+
+.nav-links a {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 14px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #e2e8f0;
+    text-decoration: none;
+    transition: all .2s ease;
+}
+
+.nav-links a:hover {
+    background: rgba(59,130,246,.28);
+    color: white;
+    transform: translateX(3px);
+}
+
+.container {
+    width: calc(100% - 260px);
+    max-width: none;
+    margin-left: 260px;
+    margin-right: 0;
+    padding: 28px 32px 50px;
+    box-sizing: border-box;
+}
+
+.footer {
+    margin-left: 260px;
+}
+
+.hero h1 {
+    font-size: 32px;
+}
+
+.section h2 {
+    font-size: 23px;
+}
+
+.master-table th,
+.master-table td {
+    font-size: 14px;
+}
+
+.master-table th {
+    font-size: 15px;
+    font-weight: 900;
+}
+
+.slot-cell {
+    font-size: 15px !important;
+}
+
+.lecture-cell {
+    padding: 12px;
+    border: 0;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 7px rgba(15,23,42,.10);
+    color: #172033;
+}
+
+.lecture-cell strong {
+    font-size: 16px;
+    line-height: 1.25;
+}
+
+.lecture-cell .meta {
+    font-size: 13px;
+    margin-top: 5px;
+    color: #334155;
+}
+
+/* Different colours for different timetable boxes */
+.subject-color-0 { background: #dbeafe; border-left: 5px solid #2563eb; }
+.subject-color-1 { background: #dcfce7; border-left: 5px solid #16a34a; }
+.subject-color-2 { background: #fef3c7; border-left: 5px solid #d97706; }
+.subject-color-3 { background: #fce7f3; border-left: 5px solid #db2777; }
+.subject-color-4 { background: #ede9fe; border-left: 5px solid #7c3aed; }
+.subject-color-5 { background: #cffafe; border-left: 5px solid #0891b2; }
+.subject-color-6 { background: #ffedd5; border-left: 5px solid #ea580c; }
+.subject-color-7 { background: #e0e7ff; border-left: 5px solid #4f46e5; }
+
+.current-cell {
+    outline: 3px solid #22c55e;
+    outline-offset: 1px;
+}
+
+.daily-timetable-table th,
+.daily-timetable-table td {
+    font-size: 15px;
+}
+
+.daily-timetable-table td strong {
+    font-size: 16px;
+}
+
+.subject-badge {
+    display: inline-block;
+    padding: 8px 11px;
+    border-radius: 9px;
+    font-weight: 900;
+    font-size: 15px;
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+    .navbar { width: 220px; }
+    .container { width: calc(100% - 220px); margin-left: 220px; padding: 22px; }
+    .footer { margin-left: 220px; }
     .nav-links a { font-size: 14px; padding: 11px 10px; }
 }
 
@@ -1676,10 +1786,13 @@ td { font-size: 14px; }
     .brand {
         flex-direction: row;
         justify-content: flex-start;
-        padding: 4px 5px 12px;
+        padding: 4px;
     }
 
-    .college-logo { width: 58px; height: 58px; }
+    .college-logo {
+        width: 58px;
+        height: 58px;
+    }
 
     .logo {
         font-size: 18px;
@@ -1696,9 +1809,8 @@ td { font-size: 14px; }
 
     .nav-links a {
         width: auto;
-        min-height: auto;
         font-size: 13px;
-        padding: 10px 11px;
+        padding: 10px;
     }
 
     .container {
@@ -1709,25 +1821,9 @@ td { font-size: 14px; }
     }
 
     .footer { margin-left: 0; }
-
-    .hero {
-        padding: 23px 20px;
-        border-radius: 17px;
-    }
-
     .hero h1 { font-size: 25px; }
-    .section { padding: 17px; }
-    .section h2 { font-size: 21px; }
-
-    .lecture {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .time { min-width: auto; }
-
-    .action-row .btn { flex: 1; }
 }
+
 </style>
 
 <script>
@@ -2716,6 +2812,10 @@ def attendance():
                 row.class_name or ""
             ) %}
 
+            {% set lecture_active = attendance_window_open(
+                record_date, row.day, row.slot
+            ) %}
+
             <div class="lecture">
                 <div class="time">
                     {{ row.slot }}
@@ -2741,40 +2841,59 @@ def attendance():
                             <span class="badge badge-none">NOT MARKED</span>
                         {% endif %}
                     </div>
+
+                    {% set existing_record = attendance_record_for(
+                        record_date, row.faculty, row.year, row.day,
+                        row.slot, row.subject, row.class_name or ""
+                    ) %}
+                    {% if existing_record %}
+                        <div class="meta" style="margin-top:7px; font-weight:800;">
+                            👥 Present Students: {{ existing_record.present_count }}
+                        </div>
+                    {% endif %}
                 </div>
 
                 <div class="action-row">
-                    <form method="post" action="{{ url_for('mark_attendance') }}">
-                        <input type="hidden" name="record_date" value="{{ record_date_text }}">
-                        <input type="hidden" name="faculty" value="{{ row.faculty }}">
-                        <input type="hidden" name="year" value="{{ row.year }}">
-                        <input type="hidden" name="day" value="{{ row.day }}">
-                        <input type="hidden" name="slot" value="{{ row.slot }}">
-                        <input type="hidden" name="subject" value="{{ row.subject }}">
-                        <input type="hidden" name="class_name" value="{{ row.class_name or '' }}">
-                        <input type="hidden" name="teacher" value="{{ row.teacher or '' }}">
+                    {% if status %}
+                        <span class="attendance-locked">🔒 Attendance locked — cannot be changed</span>
+                    {% elif lecture_active %}
+                        <form method="post" action="{{ url_for('mark_attendance') }}">
+                            <input type="hidden" name="record_date" value="{{ record_date_text }}">
+                            <input type="hidden" name="faculty" value="{{ row.faculty }}">
+                            <input type="hidden" name="year" value="{{ row.year }}">
+                            <input type="hidden" name="day" value="{{ row.day }}">
+                            <input type="hidden" name="slot" value="{{ row.slot }}">
+                            <input type="hidden" name="subject" value="{{ row.subject }}">
+                            <input type="hidden" name="class_name" value="{{ row.class_name or '' }}">
+                            <input type="hidden" name="teacher" value="{{ row.teacher or '' }}">
 
-                        <button class="btn btn-green btn-small" name="status" value="taken">
-                            ✓ Taken
-                        </button>
+                            <div style="min-width:190px; margin-bottom:8px;">
+                                <label>Present Students</label>
+                                <input
+                                    type="number"
+                                    name="present_count"
+                                    min="0"
+                                    step="1"
+                                    required
+                                    placeholder="e.g. 52"
+                                >
+                            </div>
 
-                        <button class="btn btn-red btn-small" name="status" value="not_taken">
-                            ✕ Not Taken
-                        </button>
+                            <button class="btn btn-green btn-small" name="status" value="taken">
+                                ✓ Taken
+                            </button>
 
-                        <button class="btn btn-orange btn-small" name="status" value="cancelled">
-                            Cancelled
-                        </button>
+                            <button class="btn btn-red btn-small" name="status" value="not_taken">
+                                ✕ Not Taken
+                            </button>
 
-                        <button
-                            class="btn btn-gray btn-small"
-                            name="status"
-                            value="clear"
-                            onclick="return confirm('Remove this saved attendance record?')"
-                        >
-                            Undo
-                        </button>
-                    </form>
+                            <button class="btn btn-orange btn-small" name="status" value="cancelled">
+                                Cancelled
+                            </button>
+                        </form>
+                    {% else %}
+                        <span class="attendance-disabled">⏱️ Marking is available only during this lecture</span>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
@@ -2796,6 +2915,8 @@ def attendance():
         record_date=record_date,
         record_date_text=record_date_text,
         attendance_status_for=attendance_status_for,
+        attendance_record_for=attendance_record_for,
+        attendance_window_open=attendance_window_open,
         page_title="Attendance"
     )
 
@@ -2825,6 +2946,22 @@ def mark_attendance():
     teacher = request.form.get("teacher", "").strip()
     status = request.form.get("status", "").strip()
 
+    try:
+        present_count = int(request.form.get("present_count", ""))
+    except (TypeError, ValueError):
+        flash("Please enter a valid present student number.")
+        return redirect(url_for(
+            "attendance", faculty=faculty, year=year, day=day,
+            record_date=record_date.isoformat()
+        ))
+
+    if present_count < 0:
+        flash("Present student number cannot be negative.")
+        return redirect(url_for(
+            "attendance", faculty=faculty, year=year, day=day,
+            record_date=record_date.isoformat()
+        ))
+
     if not all([faculty, year, day, slot, subject]):
         flash("Incomplete lecture information.")
         return redirect(url_for("attendance"))
@@ -2845,43 +2982,36 @@ def mark_attendance():
         class_name
     )
 
-    if status == "clear":
-        if record:
-            db.session.delete(record)
-            db.session.commit()
-            flash("Attendance record removed.")
-        else:
-            flash("No saved attendance record to remove.")
+    # Once attendance is saved, it is permanently locked.
+    if record:
+        flash("Attendance is already marked and cannot be changed.")
+
+    # Attendance can only be marked while the lecture is running today.
+    elif not attendance_window_open(record_date, day, slot):
+        flash("Attendance can only be marked during the scheduled lecture time.")
 
     elif status in VALID_STATUSES:
-        if record:
-            record.status = status
-            record.teacher = teacher
-            record.marked_by_user_id = user.id
-            record.marked_by = user.name
-            record.marked_at = now_ist_naive()
-        else:
-            record = Attendance(
-                record_date=record_date,
-                faculty=faculty,
-                year=year,
-                class_name=class_name,
-                day=day,
-                slot=slot,
-                subject=subject,
-                teacher=teacher,
-                status=status,
-                marked_by_user_id=user.id,
-                marked_by=user.name,
-                marked_at=now_ist_naive()
-            )
-            db.session.add(record)
-
+        record = Attendance(
+            record_date=record_date,
+            faculty=faculty,
+            year=year,
+            class_name=class_name,
+            day=day,
+            slot=slot,
+            subject=subject,
+            teacher=teacher,
+            status=status,
+            present_count=present_count,
+            marked_by_user_id=user.id,
+            marked_by=user.name,
+            marked_at=now_ist_naive()
+        )
+        db.session.add(record)
         db.session.commit()
 
         flash(
             f"{subject} — {VALID_STATUSES[status]} "
-            f"for {record_date.strftime('%d-%m-%Y')}."
+            f"for {record_date.strftime('%d-%m-%Y')}. Attendance is now locked."
         )
 
     else:
@@ -3239,6 +3369,7 @@ def reports():
                         <th>Class</th>
                         <th>Subject</th>
                         <th>Teacher</th>
+                        <th>Present Students</th>
                         <th>Status</th>
                         <th>Marked By</th>
                         <th>Marked At</th>
@@ -3256,6 +3387,7 @@ def reports():
                             <td>{{ r.class_name or "—" }}</td>
                             <td><strong>{{ r.subject }}</strong></td>
                             <td>{{ r.teacher or "—" }}</td>
+                            <td><strong>{{ r.present_count }}</strong></td>
 
                             <td>
                                 {% if r.status == "taken" %}
