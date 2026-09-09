@@ -2139,16 +2139,24 @@ setInterval(reloadLiveLecture, 15000);
 
 
 def render_page(content, **context):
+    # Some pages (especially Attendance) need current_user_obj while their
+    # inner template is rendered. Do not pass that same keyword twice to the
+    # outer BASE_HTML template, otherwise Flask/Jinja raises a 500 error.
+    page_user = context.get("current_user_obj") or current_user()
+
     body = render_template_string(content, **context)
+
+    context.pop("current_user_obj", None)
+    page_title = context.pop(
+        "page_title",
+        "SGB College Management"
+    )
 
     return render_template_string(
         BASE_HTML,
         content=body,
-        current_user_obj=current_user(),
-        page_title=context.pop(
-            "page_title",
-            "SGB College Management"
-        ),
+        current_user_obj=page_user,
+        page_title=page_title,
         **context
     )
 
