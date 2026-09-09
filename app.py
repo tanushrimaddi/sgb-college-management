@@ -64,6 +64,18 @@ YEAR_ORDER = ["1st Year", "2nd Year", "3rd Year"]
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
 
+# Trial teacher accounts. Each non-admin account can mark attendance only
+# for its assigned subject. Change passwords after first login.
+TRIAL_TEACHERS = [
+    {"name": "G.D Kurundkar", "username": "g.d.kurundkar", "password": "teacher123", "subject": "comp sci"},
+    {"name": "R.S.Shaikh", "username": "r.s.shaikh", "password": "teacher123", "subject": "Physics"},
+    {"name": "J.S.Pulle", "username": "j.s.pulle", "password": "teacher123", "subject": "chemistry"},
+    {"name": "A.S.Kausadikar", "username": "a.s.kausadikar", "password": "teacher123", "subject": "math"},
+    {"name": "R.R.Rakh", "username": "r.r.rakh", "password": "teacher123", "subject": "micro"},
+]
+
+ADMIN_DISPLAY_NAME = "A.B.Kurhe"
+
 TIMETABLE_FILE = os.path.join(BASE_DIR, "timetable.json")
 
 
@@ -371,6 +383,14 @@ class User(db.Model):
         nullable=False
     )
 
+    # For teacher accounts this stores the one subject they are allowed to
+    # mark. Admin accounts leave it empty and can mark every subject.
+    assigned_subject = db.Column(
+        db.String(300),
+        nullable=True,
+        index=True
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=now_ist_naive,
@@ -591,6 +611,13 @@ def migrate_legacy_schema():
         "INTEGER NOT NULL DEFAULT 0"
     )
 
+    # Teacher subject permission.
+    add_column_if_missing(
+        "users",
+        "assigned_subject",
+        "VARCHAR(300)"
+    )
+
 
 def initialise_database():
     db.create_all()
@@ -614,10 +641,34 @@ def initialise_database():
         db.session.commit()
     else:
         # Keep the configured account an admin.
-        # This also upgrades the old project's primary admin account.
         if not admin.is_admin:
             admin.is_admin = True
             db.session.commit()
+
+    # The requested administrator is A.B.Kurhe. Keep the existing primary
+    # admin username so current deployments do not lose their login.
+    admin.name = ADMIN_DISPLAY_NAME
+    admin.is_admin = True
+    db.session.commit()
+
+    # Create/update the five trial teacher accounts. Existing passwords are
+    # preserved so redeploys do not unexpectedly reset credentials.
+    for teacher_data in TRIAL_TEACHERS:
+        teacher = User.query.filter_by(username=teacher_data["username"]).first()
+        if not teacher:
+            teacher = User(
+                name=teacher_data["name"],
+                username=teacher_data["username"],
+                password_hash=generate_password_hash(teacher_data["password"]),
+                is_admin=False,
+                assigned_subject=teacher_data["subject"]
+            )
+            db.session.add(teacher)
+        else:
+            teacher.name = teacher_data["name"]
+            teacher.is_admin = False
+            teacher.assigned_subject = teacher_data["subject"]
+    db.session.commit()
 
     # Import timetable.json only when the timetable table is empty.
     # This preserves the user's existing timetable structure/data.
@@ -2052,8 +2103,11 @@ setInterval(reloadLiveLecture, 15000);
             <a href="{{ url_for('access_control') }}">👥 Users</a>
             <a href="{{ url_for('timetable_manage') }}">⚙ Manage Timetable</a>
             <a href="{{ url_for('logout') }}">🚪 Logout</a>
+        {% elif current_user_obj and current_user_obj.assigned_subject %}
+            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
         {% else %}
-            <a href="{{ url_for('login') }}">🔐 Admin Login</a>
+            <a href="{{ url_for('login') }}">🔐 Login</a>
         {% endif %}
     </div>
 
@@ -2783,11 +2837,43 @@ def logout():
 
 
 # ============================================================
+# ATTENDANCE PERMISSION HELPERS
+# ============================================================
+
+def normalize_subject(value):
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def can_mark_subject(user, subject):
+    if not user:
+        return False
+    if user.is_admin:
+        return True
+    return normalize_subject(user.assigned_subject) == normalize_subject(subject)
+
+
+def attendance_access_required(view):
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        user = current_user()
+
+        if not user:
+            return redirect(url_for("login", next=request.full_path))
+
+        if not user.is_admin and not user.assigned_subject:
+            flash("Attendance access is not assigned to this account.")
+            return redirect(url_for("home"))
+
+        return view(*args, **kwargs)
+    return wrapped
+
+
+# ============================================================
 # ATTENDANCE PAGE
 # ============================================================
 
 @app.route("/attendance")
-@admin_required
+@attendance_access_required
 def attendance():
     faculties = all_faculties()
 
@@ -2952,6 +3038,8 @@ def attendance():
                 <div class="action-row">
                     {% if status %}
                         <span class="attendance-locked">🔒 Attendance locked — cannot be changed</span>
+                    {% elif not can_mark_subject(current_user_obj, row.subject) %}
+                        <span class="attendance-disabled">🔐 Only the assigned subject teacher can mark this attendance</span>
                     {% elif lecture_active %}
                         <form method="post" action="{{ url_for('mark_attendance') }}">
                             <input type="hidden" name="record_date" value="{{ record_date_text }}">
@@ -3013,6 +3101,8 @@ def attendance():
         attendance_status_for=attendance_status_for,
         attendance_record_for=attendance_record_for,
         attendance_window_open=attendance_window_open,
+        current_user_obj=current_user(),
+        can_mark_subject=can_mark_subject,
         page_title="Attendance"
     )
 
@@ -3022,7 +3112,7 @@ def attendance():
 # ============================================================
 
 @app.route("/attendance/mark", methods=["POST"])
-@admin_required
+@attendance_access_required
 def mark_attendance():
     try:
         record_date = datetime.strptime(
@@ -3067,6 +3157,49 @@ def mark_attendance():
         return redirect(url_for("attendance"))
 
     user = current_user()
+
+    # Server-side enforcement: a teacher can never submit another teacher's
+    # subject by changing the HTML form values. Admin can mark everything.
+    if not can_mark_subject(user, subject):
+        flash("You can mark attendance only for your assigned subject.")
+        return redirect(url_for(
+            "attendance", faculty=faculty, year=year, day=day,
+            record_date=record_date.isoformat()
+        ))
+
+    # Also verify that the submitted lecture actually exists in the timetable.
+    # This prevents a teacher from crafting a fake slot/lecture in the browser.
+    lecture = Timetable.query.filter_by(
+        faculty=faculty,
+        year=year,
+        day=day,
+        slot=slot,
+        subject=subject,
+        class_name=class_name or None
+    ).first()
+
+    if not lecture:
+        # Some old timetable rows may have an empty class_name stored as an
+        # empty string instead of NULL, so retry without class_name.
+        lecture = Timetable.query.filter_by(
+            faculty=faculty,
+            year=year,
+            day=day,
+            slot=slot,
+            subject=subject
+        ).first()
+
+    if not lecture:
+        flash("This lecture does not exist in the timetable.")
+        return redirect(url_for(
+            "attendance", faculty=faculty, year=year, day=day,
+            record_date=record_date.isoformat()
+        ))
+
+    if not class_name:
+        class_name = lecture.class_name or ""
+    if not teacher:
+        teacher = lecture.teacher or ""
 
     record = attendance_record_for(
         record_date,
@@ -3624,6 +3757,7 @@ def export_csv():
         "Subject",
         "Teacher",
         "Status",
+        "Present Students",
         "Marked By",
         "Marked At"
     ])
@@ -3639,6 +3773,7 @@ def export_csv():
             r.subject,
             r.teacher or "",
             VALID_STATUSES.get(r.status, r.status),
+            r.present_count,
             r.marked_by or "",
             r.marked_at.strftime("%Y-%m-%d %H:%M:%S")
             if r.marked_at else ""
@@ -3778,6 +3913,7 @@ def access_control():
                     <th>Name</th>
                     <th>Username</th>
                     <th>Administrator</th>
+                    <th>Attendance Subject</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -3791,9 +3927,10 @@ def access_control():
                             {% if u.is_admin %}
                                 <span class="badge badge-taken">ADMIN</span>
                             {% else %}
-                                <span class="badge badge-none">USER</span>
+                                <span class="badge badge-none">TEACHER</span>
                             {% endif %}
                         </td>
+                        <td>{{ u.assigned_subject or "All subjects" }}</td>
                         <td>
                             {% if u.username != admin_username %}
                                 <div class="action-row">
