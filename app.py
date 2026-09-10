@@ -1559,14 +1559,78 @@ td {
 }
 
 .lecture-cell {
-    border-radius: 8px;
-    padding: 8px;
-    background: #f8fafc;
-    margin-bottom: 6px;
+    border-radius: 10px;
+    padding: 10px 8px;
+    margin-bottom: 7px;
+    text-align: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.06);
 }
 
 .lecture-cell strong {
     display: block;
+    font-size: 13px;
+    line-height: 1.35;
+    margin-bottom: 5px;
+}
+
+/* Consistent subject colors in the master timetable. */
+.lecture-cell.subject-blue { border-top: 4px solid #2563eb; }
+.lecture-cell.subject-purple { border-top: 4px solid #7c3aed; }
+.lecture-cell.subject-green { border-top: 4px solid #16a34a; }
+.lecture-cell.subject-orange { border-top: 4px solid #ea580c; }
+.lecture-cell.subject-teal { border-top: 4px solid #0d9488; }
+.lecture-cell.subject-olive { border-top: 4px solid #65a30d; }
+.lecture-cell.subject-pink { border-top: 4px solid #db2777; }
+.lecture-cell.subject-indigo { border-top: 4px solid #4f46e5; }
+.lecture-cell.subject-slate { border-top: 4px solid #64748b; }
+
+.lecture-cell .subject-name {
+    display: inline-block;
+    font-weight: 900;
+    padding: 5px 9px;
+    border-radius: 7px;
+    background: #f1f5f9;
+}
+
+.master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+}
+
+.master-table th {
+    text-align: center;
+    vertical-align: middle;
+    background: #eaf0ff;
+    color: #173b7a;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 13px 10px;
+}
+
+.master-table td {
+    min-width: 155px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 9px;
+}
+
+.master-table .slot-cell {
+    background: #f1f5f9;
+    color: #1d4ed8;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.master-table .meta {
+    text-align: center;
+    line-height: 1.35;
 }
 
 .current-cell {
@@ -2457,7 +2521,21 @@ def home():
 </div>
 
 <script>
-async function prepareAttendanceForm(form) {
+async function prepareAttendanceForm(form, submitter) {
+    // form.submit() does not include the clicked button's name/value.
+    // Preserve the selected attendance status before submitting after GPS verification.
+    if (submitter && submitter.name && submitter.value) {
+        let statusInput = form.querySelector('input[data-attendance-status="1"]');
+        if (!statusInput) {
+            statusInput = document.createElement("input");
+            statusInput.type = "hidden";
+            statusInput.dataset.attendanceStatus = "1";
+            statusInput.name = submitter.name;
+            form.appendChild(statusInput);
+        }
+        statusInput.value = submitter.value;
+    }
+
     if (form.dataset.locationReady === "1") return true;
 
     if (!navigator.geolocation) {
@@ -2533,6 +2611,37 @@ def api_live():
     )
 
     return live_payload(faculty, year)
+
+
+# ============================================================
+# MASTER TIMETABLE DISPLAY HELPERS
+# ============================================================
+
+def short_subject_label(value):
+    """Make timetable category labels compact and consistent for display."""
+    import re
+    text = str(value or "").strip()
+    text = re.sub(r"^Major\s*:", "Maj:", text, flags=re.IGNORECASE)
+    text = re.sub(r"^Minor\s*:", "Min:", text, flags=re.IGNORECASE)
+    text = re.sub(r"^Major\s+", "Maj: ", text, flags=re.IGNORECASE)
+    text = re.sub(r"^Minor\s+", "Min: ", text, flags=re.IGNORECASE)
+    return text
+
+
+def subject_color_class(value):
+    """Return a stable color class so the same subject keeps the same color."""
+    key = normalize_subject(value) if 'normalize_subject' in globals() else str(value or '').strip().lower()
+    colors = {
+        "physics": "subject-blue",
+        "chemistry": "subject-purple",
+        "computer science": "subject-green",
+        "mathematics": "subject-orange",
+        "microbiology": "subject-teal",
+        "botany": "subject-olive",
+        "zoology": "subject-pink",
+        "english": "subject-indigo",
+    }
+    return colors.get(key, "subject-slate")
 
 
 # ============================================================
@@ -2678,8 +2787,8 @@ def master_timetable():
                             {% for day in days %}
                                 <td>
                                     {% for row in matrix[slot][day] %}
-                                        <div class="lecture-cell subject-color-{{ loop.index0 % 8 }} {% if is_current_slot(row.slot, day) %}current-cell{% endif %}">
-                                            <strong>{{ row.subject }}</strong>
+                                        <div class="lecture-cell {{ subject_color_class(row.subject) }} {% if is_current_slot(row.slot, day) %}current-cell{% endif %}">
+                                            <strong class="subject-name">{{ short_subject_label(row.subject) }}</strong>
 
                                             <div class="meta">
                                                 {{ row.faculty }} • {{ row.year }}
@@ -2736,6 +2845,8 @@ def master_timetable():
         slots=slots,
         matrix=matrix,
         is_current_slot=is_current_slot,
+        short_subject_label=short_subject_label,
+        subject_color_class=subject_color_class,
         page_title="Master Timetable"
     )
 
@@ -3423,7 +3534,7 @@ def attendance():
                     {% elif not can_mark_lecture(current_user_obj, row.subject, row.teacher or '') %}
                         <span class="attendance-disabled">🔐 Only the assigned teacher for this subject can mark this attendance</span>
                     {% elif lecture_active %}
-                        <form class="attendance-form" method="post" action="{{ url_for('mark_attendance') }}" onsubmit="return prepareAttendanceForm(this);">
+                        <form class="attendance-form" method="post" action="{{ url_for('mark_attendance') }}" onsubmit="return prepareAttendanceForm(this, event.submitter);">
                             <input type="hidden" name="record_date" value="{{ record_date_text }}">
                             <input type="hidden" name="faculty" value="{{ row.faculty }}">
                             <input type="hidden" name="year" value="{{ row.year }}">
