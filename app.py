@@ -2943,7 +2943,54 @@ def logout():
 # ============================================================
 
 def normalize_subject(value):
-    return " ".join(str(value or "").strip().lower().split())
+    """Normalize timetable/teacher subject names for permission checks.
+
+    The timetable contains names such as:
+      - Computer Science-B-13
+      - Mathematics-B-17
+      - Microbiology-B-7
+      - Major: Computer Science-B-13
+
+    Teacher accounts use short names such as ``comp sci`` and ``micro``.
+    These should represent the same subject for access control.
+    """
+    import re
+
+    text = str(value or "").strip().lower()
+    text = re.sub(r"\b(major|minor|elective|vc|sl)\s*:\s*", "", text)
+    text = re.sub(r"\s+", " ", text)
+
+    aliases = {
+        "comp sci": "computer science",
+        "computer sci": "computer science",
+        "computer science": "computer science",
+        "computer science-b": "computer science",
+        "physics": "physics",
+        "chem": "chemistry",
+        "chemistry": "chemistry",
+        "math": "mathematics",
+        "mathematics": "mathematics",
+        "micro": "microbiology",
+        "microbio": "microbiology",
+        "microbiology": "microbiology",
+    }
+
+    if text in aliases:
+        return aliases[text]
+
+    # Remove room/class suffixes such as -B-13, -B-7, -Dept, etc.
+    text = re.sub(r"[- ]b[- ]?\d+\s*$", "", text)
+    text = re.sub(r"[- ]dept\s*$", "", text)
+    text = re.sub(r"\s+", " ", text).strip(" -")
+
+    return aliases.get(text, text)
+
+
+def normalize_teacher_name(value):
+    """Normalize teacher names while ignoring dots/spacing/case."""
+    import re
+    text = str(value or "").strip().lower()
+    return re.sub(r"[^a-z0-9]", "", text)
 
 
 def can_mark_subject(user, subject):
@@ -2955,8 +3002,13 @@ def can_mark_subject(user, subject):
 
 
 def can_mark_lecture(user, subject, lecture_teacher):
-    """Strict attendance permission: admin can mark all; teachers must match
-    both their assigned subject AND the teacher name stored on the timetable.
+    """Attendance permission for the five assigned teachers.
+
+    Admin can mark everything. A teacher must match their assigned subject.
+    If the timetable has a teacher name, it must also match the logged-in
+    teacher. If the timetable teacher field is blank (as in the original
+    timetable data), subject matching is used so valid teacher accounts are
+    not incorrectly locked out.
     """
     if not user:
         return False
@@ -2966,10 +3018,14 @@ def can_mark_lecture(user, subject, lecture_teacher):
     assigned_ok = (
         normalize_subject(user.assigned_subject) == normalize_subject(subject)
     )
-    teacher_ok = (
-        normalize_subject(user.name) == normalize_subject(lecture_teacher)
-    )
-    return assigned_ok and teacher_ok
+    if not assigned_ok:
+        return False
+
+    timetable_teacher = str(lecture_teacher or "").strip()
+    if not timetable_teacher:
+        return True
+
+    return normalize_teacher_name(user.name) == normalize_teacher_name(timetable_teacher)
 
 
 def attendance_access_required(view):
