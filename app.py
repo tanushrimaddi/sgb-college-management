@@ -2943,32 +2943,50 @@ def logout():
 # ============================================================
 
 def normalize_subject(value):
-    """Normalize timetable/teacher subject names for permission checks.
+    """Normalize subject names for teacher access control.
 
-    The timetable contains names such as:
-      - Computer Science-B-13
-      - Mathematics-B-17
-      - Microbiology-B-7
-      - Major: Computer Science-B-13
-
-    Teacher accounts use short names such as ``comp sci`` and ``micro``.
-    These should represent the same subject for access control.
+    Teacher accounts use short subjects (comp sci, math, micro), while the
+    timetable may contain labels such as Computer Science-B-13,
+    Practical: Physics, SEC: Physics, Major: Computer Science-B-13,
+    Chemistry-B-14, Mathematics-B-17 and Microbiology-B-7.
     """
     import re
 
     text = str(value or "").strip().lower()
-    text = re.sub(r"\b(major|minor|elective|vc|sl)\s*:\s*", "", text)
     text = re.sub(r"\s+", " ", text)
+
+    # Remove timetable category/paper prefixes.
+    text = re.sub(
+        r"^(major|minor|elective|vc|sl|practical|practicals|sec|aec|vac|ge|oe|compulsory|optional)\s*:\s*",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Also support prefixes without a colon.
+    text = re.sub(
+        r"^(practical|practicals|sec|aec|vac|ge|oe|major|minor)\s+",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+
+    # Remove common class/room suffixes, e.g. -B-13 / B-13 / -B-7.
+    text = re.sub(r"\s*[-/]?\s*b\s*[-/]?\s*\d+\s*$", "", text)
+    text = re.sub(r"\s*[-/]?\s*dept\s*$", "", text)
+    text = text.strip(" -:/")
 
     aliases = {
         "comp sci": "computer science",
         "computer sci": "computer science",
         "computer science": "computer science",
-        "computer science-b": "computer science",
+        "cs": "computer science",
         "physics": "physics",
+        "phys": "physics",
         "chem": "chemistry",
         "chemistry": "chemistry",
         "math": "mathematics",
+        "maths": "mathematics",
         "mathematics": "mathematics",
         "micro": "microbiology",
         "microbio": "microbiology",
@@ -2978,12 +2996,19 @@ def normalize_subject(value):
     if text in aliases:
         return aliases[text]
 
-    # Remove room/class suffixes such as -B-13, -B-7, -Dept, etc.
-    text = re.sub(r"[- ]b[- ]?\d+\s*$", "", text)
-    text = re.sub(r"[- ]dept\s*$", "", text)
-    text = re.sub(r"\s+", " ", text).strip(" -")
+    # Handle labels that still contain extra text around the subject.
+    if "computer science" in text or "comp sci" in text:
+        return "computer science"
+    if "microbiology" in text or "microbio" in text:
+        return "microbiology"
+    if "physics" in text:
+        return "physics"
+    if "chemistry" in text or text.startswith("chem"):
+        return "chemistry"
+    if "mathematics" in text or text == "math" or text.startswith("math"):
+        return "mathematics"
 
-    return aliases.get(text, text)
+    return text
 
 
 def normalize_teacher_name(value):
