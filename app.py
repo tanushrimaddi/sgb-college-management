@@ -3,6 +3,7 @@ import json
 import csv
 import io
 import math
+import uuid
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from functools import wraps
@@ -392,6 +393,14 @@ class User(db.Model):
         index=True
     )
 
+    # Teachers may have only one active login at a time. The session is
+    # released only when that teacher explicitly logs out.
+    active_session_token = db.Column(
+        db.String(100),
+        nullable=True,
+        index=True
+    )
+
     created_at = db.Column(
         db.DateTime,
         default=now_ist_naive,
@@ -628,6 +637,13 @@ def migrate_legacy_schema():
         "VARCHAR(300)"
     )
 
+    # One active teacher login at a time.
+    add_column_if_missing(
+        "users",
+        "active_session_token",
+        "VARCHAR(100)"
+    )
+
 
 def initialise_database():
     db.create_all()
@@ -708,7 +724,20 @@ def current_user():
     if not user_id:
         return None
 
-    return db.session.get(User, user_id)
+    user = db.session.get(User, user_id)
+    if not user:
+        session.clear()
+        return None
+
+    # Teacher sessions are tied to a server-side token. This prevents a
+    # second login from being active at the same time.
+    if not user.is_admin:
+        session_token = session.get("active_session_token")
+        if not session_token or session_token != user.active_session_token:
+            session.clear()
+            return None
+
+    return user
 
 
 def login_required(view):
@@ -2866,6 +2895,122 @@ def timetable_page():
 
 
 # ============================================================
+# TEACHER LOCATION VERIFICATION AT LOGIN
+# ============================================================
+
+@app.route("/teacher-location")
+@login_required
+def teacher_location():
+    user = current_user()
+    if not user or user.is_admin:
+        return redirect(url_for("home"))
+
+    # A teacher must verify their current GPS location before attendance is
+    # available. Attendance POST also checks the live GPS position again.
+    content = r"""
+<div class="hero">
+    <h1>📍 Location Verification Required</h1>
+    <p>Allow your phone/browser location before you can mark attendance.</p>
+</div>
+
+<div class="section" style="border-left:5px solid #16a34a;">
+    <h2>Teacher: {{ current_user_obj.name }}</h2>
+    <p>Your attendance access will open only after your current location is verified inside the college area.</p>
+
+    <div id="locationStatus" style="padding:14px;border-radius:10px;background:#f1f5f9;margin:14px 0;">
+        📍 Requesting location permission...
+    </div>
+
+    <button type="button" class="btn btn-blue" id="locationButton" onclick="requestTeacherLocation()">
+        📍 Allow Location & Continue
+    </button>
+
+    <p style="margin-top:14px;font-size:13px;color:#667085;">
+        If no permission popup appears, open your browser site settings for this website and set
+        <b>Location → Allow</b>, then reload this page. You must be physically inside the configured
+        college area.
+    </p>
+</div>
+
+<script>
+function setStatus(text, ok=false) {
+    const el = document.getElementById('locationStatus');
+    el.textContent = text;
+    el.style.background = ok ? '#ecfdf3' : '#f1f5f9';
+    el.style.color = ok ? '#166534' : '#111827';
+}
+
+function requestTeacherLocation() {
+    if (!navigator.geolocation) {
+        setStatus('❌ This phone/browser does not support GPS location. Use Chrome or Safari with Location enabled.');
+        return;
+    }
+
+    setStatus('📍 Please allow Location when your browser asks...');
+    navigator.geolocation.getCurrentPosition(function(position) {
+        setStatus('📍 Location received. Verifying with the college server...');
+
+        fetch('{{ url_for("verify_teacher_location") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: new URLSearchParams({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                location_accuracy: position.coords.accuracy || ''
+            })
+        }).then(r => r.json()).then(data => {
+            if (data.ok) {
+                setStatus('✅ ' + data.message + ' Attendance access is now enabled.', true);
+                setTimeout(() => { window.location.href = '{{ url_for("attendance") }}'; }, 700);
+            } else {
+                setStatus('❌ ' + data.message);
+            }
+        }).catch(() => {
+            setStatus('❌ Could not verify location with the server. Check your internet connection and try again.');
+        });
+    }, function(error) {
+        let message = '❌ Location permission is required.';
+        if (error.code === 1) message += ' Tap the browser site/lock settings and set Location to Allow, then try again.';
+        if (error.code === 2) message += ' Your phone could not determine its location. Turn on phone Location/GPS.';
+        if (error.code === 3) message += ' Location request timed out. Try again outdoors or near a window.';
+        setStatus(message);
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+
+// Request immediately after the page loads so the browser can show its
+// location permission prompt. The button remains available if the prompt
+// was previously denied or the browser requires a user gesture.
+window.addEventListener('load', requestTeacherLocation);
+</script>
+"""
+    return render_page(
+        content,
+        current_user_obj=user,
+        page_title="Teacher Location Verification"
+    )
+
+
+@app.route("/teacher-location/verify", methods=["POST"])
+@login_required
+def verify_teacher_location():
+    user = current_user()
+    if not user or user.is_admin:
+        return jsonify(ok=False, message="Teacher location verification is not required for this account."), 403
+
+    latitude = request.form.get("latitude", "").strip()
+    longitude = request.form.get("longitude", "").strip()
+
+    allowed, message = location_allowed(latitude, longitude)
+    if not allowed:
+        session["location_verified"] = False
+        return jsonify(ok=False, message=message), 403
+
+    session["location_verified"] = True
+    session["location_verified_at"] = now_ist().isoformat()
+    return jsonify(ok=True, message=message)
+
+
+# ============================================================
 # ADMIN LOGIN
 # ============================================================
 
@@ -2881,8 +3026,23 @@ def login():
             user.password_hash,
             password
         ):
+            # Teachers are single-session accounts. A second login is refused
+            # until the existing teacher session explicitly logs out.
+            if not user.is_admin and user.active_session_token:
+                flash("This teacher account is already logged in on another device/browser. Please logout there first.")
+                return redirect(url_for("login"))
+
             session.clear()
             session["user_id"] = user.id
+
+            if not user.is_admin:
+                user.active_session_token = uuid.uuid4().hex
+                db.session.commit()
+                session["active_session_token"] = user.active_session_token
+                session["location_verified"] = False
+
+                # Every teacher login must pass the GPS check before attendance.
+                return redirect(url_for("teacher_location"))
 
             next_url = request.args.get("next")
 
@@ -2934,6 +3094,12 @@ def login():
 
 @app.route("/logout")
 def logout():
+    user_id = session.get("user_id")
+    if user_id:
+        user = db.session.get(User, user_id)
+        if user and not user.is_admin:
+            user.active_session_token = None
+            db.session.commit()
     session.clear()
     return redirect(url_for("home"))
 
@@ -3064,6 +3230,9 @@ def attendance_access_required(view):
         if not user.is_admin and not user.assigned_subject:
             flash("Attendance access is not assigned to this account.")
             return redirect(url_for("home"))
+
+        if not user.is_admin and not session.get("location_verified"):
+            return redirect(url_for("teacher_location", next=request.full_path))
 
         return view(*args, **kwargs)
     return wrapped
