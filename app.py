@@ -2,13 +2,14 @@ import os
 import json
 import csv
 import io
+import math
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
 from functools import wraps
 
 from flask import (
     Flask, render_template_string, request, redirect, url_for,
-    session, flash, Response
+    session, flash, Response, jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -437,6 +438,15 @@ class Timetable(db.Model):
         ),
     )
 
+
+class CollegeLocation(db.Model):
+    __tablename__ = "college_location"
+
+    id = db.Column(db.Integer, primary_key=True)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    radius_meters = db.Column(db.Float, nullable=False, default=150.0)
+    updated_at = db.Column(db.DateTime, default=now_ist_naive, nullable=False)
 
 class Attendance(db.Model):
     __tablename__ = "attendance"
@@ -934,6 +944,51 @@ VALID_STATUSES = {
     "not_taken": "Not Taken",
     "cancelled": "Cancelled"
 }
+
+
+
+def get_college_location():
+    """Return the single configured college geofence, if an admin has set it."""
+    return CollegeLocation.query.first()
+
+
+def distance_meters(lat1, lon1, lat2, lon2):
+    """Haversine distance between two GPS coordinates in meters."""
+    radius = 6371000.0
+    p1 = math.radians(float(lat1))
+    p2 = math.radians(float(lat2))
+    dp = math.radians(float(lat2) - float(lat1))
+    dl = math.radians(float(lon2) - float(lon1))
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return radius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def location_allowed(latitude, longitude):
+    """Check whether the supplied browser GPS point is inside the college geofence."""
+    location = get_college_location()
+    if not location:
+        return False, "College location has not been configured by the administrator."
+
+    try:
+        lat = float(latitude)
+        lon = float(longitude)
+    except (TypeError, ValueError):
+        return False, "Valid device location is required."
+
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        return False, "Invalid GPS coordinates."
+
+    distance = distance_meters(
+        location.latitude, location.longitude, lat, lon
+    )
+
+    if distance > location.radius_meters:
+        return False, (
+            f"You are about {round(distance)} m away from the college. "
+            f"Attendance can be marked only within {round(location.radius_meters)} m of the college."
+        )
+
+    return True, f"Location verified ({round(distance)} m from college)."
 
 
 def attendance_record_for(
@@ -2101,6 +2156,7 @@ setInterval(reloadLiveLecture, 15000);
             <a href="{{ url_for('attendance') }}">📝 Attendance</a>
             <a href="{{ url_for('reports') }}">📊 Reports</a>
             <a href="{{ url_for('access_control') }}">👥 Users</a>
+            <a href="{{ url_for('college_location') }}">📍 College Location</a>
             <a href="{{ url_for('timetable_manage') }}">⚙ Manage Timetable</a>
             <a href="{{ url_for('logout') }}">🚪 Logout</a>
         {% elif current_user_obj and current_user_obj.assigned_subject %}
@@ -2370,6 +2426,44 @@ def home():
         {% endif %}
     </div>
 </div>
+
+<script>
+async function prepareAttendanceForm(form) {
+    if (form.dataset.locationReady === "1") return true;
+
+    if (!navigator.geolocation) {
+        alert("This device/browser does not support location access. Please use Chrome/Edge with Location enabled.");
+        return false;
+    }
+
+    navigator.geolocation.getCurrentPosition(function(position) {
+        const addHidden = (name, value) => {
+            let input = form.querySelector('input[name="' + name + '"]');
+            if (!input) {
+                input = document.createElement("input");
+                input.type = "hidden";
+                input.name = name;
+                form.appendChild(input);
+            }
+            input.value = value;
+        };
+
+        addHidden("latitude", position.coords.latitude);
+        addHidden("longitude", position.coords.longitude);
+        addHidden("location_accuracy", position.coords.accuracy || "");
+        form.dataset.locationReady = "1";
+        form.submit();
+    }, function(error) {
+        let message = "Location access is required to mark attendance.";
+        if (error.code === 1) message += " Please click the lock icon near the website address and allow Location.";
+        if (error.code === 2) message += " Your device could not determine its location.";
+        if (error.code === 3) message += " Location request timed out. Please try again.";
+        alert(message);
+    }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+
+    return false;
+}
+</script>
 """
 
     return render_page(
@@ -2860,6 +2954,24 @@ def can_mark_subject(user, subject):
     return normalize_subject(user.assigned_subject) == normalize_subject(subject)
 
 
+def can_mark_lecture(user, subject, lecture_teacher):
+    """Strict attendance permission: admin can mark all; teachers must match
+    both their assigned subject AND the teacher name stored on the timetable.
+    """
+    if not user:
+        return False
+    if user.is_admin:
+        return True
+
+    assigned_ok = (
+        normalize_subject(user.assigned_subject) == normalize_subject(subject)
+    )
+    teacher_ok = (
+        normalize_subject(user.name) == normalize_subject(lecture_teacher)
+    )
+    return assigned_ok and teacher_ok
+
+
 def attendance_access_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
@@ -2928,7 +3040,19 @@ def attendance():
     content = r"""
 <div class="hero">
     <h1>📝 Attendance Management</h1>
-    <p>Administrator-only lecture attendance</p>
+    <p>Secure lecture attendance — teachers can mark only their own subject and timetable lecture</p>
+</div>
+
+<div class="section" style="border-left:5px solid #16a34a;">
+    <h2>📍 College Location Verification</h2>
+    <p style="margin:0 0 10px;">Teachers must allow browser location access and be inside the configured college area to mark attendance.</p>
+    {% if college_location_configured %}
+        <span class="badge badge-taken">📍 Location verification required</span>
+        <span class="meta" style="margin-left:8px;">Allowed radius: {{ college_radius }} m</span>
+    {% else %}
+        <span class="badge badge-not">⚠ College location not configured</span>
+        <div class="meta" style="margin-top:8px;">Ask the administrator to open <b>College Location</b> while physically at the college and save the location.</div>
+    {% endif %}
 </div>
 
 <form class="filters" method="get">
@@ -3046,10 +3170,10 @@ def attendance():
                 <div class="action-row">
                     {% if status %}
                         <span class="attendance-locked">🔒 Attendance locked — cannot be changed</span>
-                    {% elif not can_mark_subject(current_user_obj, row.subject) %}
-                        <span class="attendance-disabled">🔐 Only the assigned subject teacher can mark this attendance</span>
+                    {% elif not can_mark_lecture(current_user_obj, row.subject, row.teacher or '') %}
+                        <span class="attendance-disabled">🔐 Only the assigned teacher for this subject can mark this attendance</span>
                     {% elif lecture_active %}
-                        <form method="post" action="{{ url_for('mark_attendance') }}">
+                        <form class="attendance-form" method="post" action="{{ url_for('mark_attendance') }}" onsubmit="return prepareAttendanceForm(this);">
                             <input type="hidden" name="record_date" value="{{ record_date_text }}">
                             <input type="hidden" name="faculty" value="{{ row.faculty }}">
                             <input type="hidden" name="year" value="{{ row.year }}">
@@ -3111,6 +3235,9 @@ def attendance():
         attendance_window_open=attendance_window_open,
         current_user_obj=current_user(),
         can_mark_subject=can_mark_subject,
+        can_mark_lecture=can_mark_lecture,
+        college_location_configured=(get_college_location() is not None),
+        college_radius=(get_college_location().radius_meters if get_college_location() else 150),
         page_title="Attendance"
     )
 
@@ -3139,6 +3266,8 @@ def mark_attendance():
     class_name = request.form.get("class_name", "").strip()
     teacher = request.form.get("teacher", "").strip()
     status = request.form.get("status", "").strip()
+    latitude = request.form.get("latitude", "").strip()
+    longitude = request.form.get("longitude", "").strip()
 
     try:
         present_count = int(request.form.get("present_count", ""))
@@ -3166,16 +3295,7 @@ def mark_attendance():
 
     user = current_user()
 
-    # Server-side enforcement: a teacher can never submit another teacher's
-    # subject by changing the HTML form values. Admin can mark everything.
-    if not can_mark_subject(user, subject):
-        flash("You can mark attendance only for your assigned subject.")
-        return redirect(url_for(
-            "attendance", faculty=faculty, year=year, day=day,
-            record_date=record_date.isoformat()
-        ))
-
-    # Also verify that the submitted lecture actually exists in the timetable.
+    # First verify that the submitted lecture actually exists in the timetable.
     # This prevents a teacher from crafting a fake slot/lecture in the browser.
     lecture = Timetable.query.filter_by(
         faculty=faculty,
@@ -3208,6 +3328,26 @@ def mark_attendance():
         class_name = lecture.class_name or ""
     if not teacher:
         teacher = lecture.teacher or ""
+
+    # Strict server-side enforcement: non-admin teachers must match BOTH
+    # the assigned subject and the teacher name on this exact timetable row.
+    if not can_mark_lecture(user, lecture.subject, lecture.teacher or ""):
+        flash("You can mark attendance only for your own assigned subject and lecture.")
+        return redirect(url_for(
+            "attendance", faculty=faculty, year=year, day=day,
+            record_date=record_date.isoformat()
+        ))
+
+    # Teachers must prove they are physically inside the configured college
+    # geofence. The administrator is exempt so they can manage the system.
+    if not user.is_admin:
+        allowed, location_message = location_allowed(latitude, longitude)
+        if not allowed:
+            flash("📍 " + location_message)
+            return redirect(url_for(
+                "attendance", faculty=faculty, year=year, day=day,
+                record_date=record_date.isoformat()
+            ))
 
     record = attendance_record_for(
         record_date,
@@ -3798,6 +3938,126 @@ def export_csv():
             "Content-Disposition":
                 f'attachment; filename="{filename}"'
         }
+    )
+
+
+# ============================================================
+# COLLEGE LOCATION / GEOFENCE
+# ============================================================
+
+@app.route("/admin/college-location", methods=["GET", "POST"])
+@admin_required
+def college_location():
+    location = get_college_location()
+
+    if request.method == "POST":
+        try:
+            latitude = float(request.form.get("latitude", ""))
+            longitude = float(request.form.get("longitude", ""))
+            radius = float(request.form.get("radius_meters", "150"))
+        except (TypeError, ValueError):
+            flash("Please provide a valid GPS location and radius.")
+            return redirect(url_for("college_location"))
+
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            flash("Invalid GPS coordinates.")
+            return redirect(url_for("college_location"))
+
+        if not (50 <= radius <= 1000):
+            flash("Radius must be between 50 and 1000 meters.")
+            return redirect(url_for("college_location"))
+
+        if not location:
+            location = CollegeLocation(
+                latitude=latitude,
+                longitude=longitude,
+                radius_meters=radius,
+                updated_at=now_ist_naive()
+            )
+            db.session.add(location)
+        else:
+            location.latitude = latitude
+            location.longitude = longitude
+            location.radius_meters = radius
+            location.updated_at = now_ist_naive()
+
+        db.session.commit()
+        flash("📍 College location saved successfully. Teachers can now mark attendance only inside this area.")
+        return redirect(url_for("college_location"))
+
+    content = r"""
+<div class="hero">
+    <h1>📍 College Attendance Location</h1>
+    <p>Set the official college GPS point. Teachers must be inside the allowed radius to mark attendance.</p>
+</div>
+
+<div class="section">
+    <h2>Set location from this device</h2>
+    <p class="meta">Open this page while you are physically at the college. Then click <b>Use My Current Location</b>.</p>
+
+    {% if location %}
+        <div class="alert">
+            Current location: {{ "%.6f"|format(location.latitude) }}, {{ "%.6f"|format(location.longitude) }}
+            • Radius: {{ location.radius_meters|round|int }} m
+        </div>
+    {% endif %}
+
+    <form method="post" id="locationForm">
+        <div class="filter-grid">
+            <div>
+                <label>Latitude</label>
+                <input id="latitude" name="latitude" required readonly value="{{ location.latitude if location else '' }}">
+            </div>
+            <div>
+                <label>Longitude</label>
+                <input id="longitude" name="longitude" required readonly value="{{ location.longitude if location else '' }}">
+            </div>
+            <div>
+                <label>Allowed Radius (meters)</label>
+                <input type="number" name="radius_meters" min="50" max="1000" step="1" value="{{ location.radius_meters|round|int if location else 150 }}" required>
+            </div>
+        </div>
+        <br>
+        <button type="button" class="btn btn-blue" onclick="captureCollegeLocation()">📍 Use My Current Location</button>
+        <button type="submit" class="btn btn-green" id="saveLocation" disabled>💾 Save College Location</button>
+        <p id="locationMessage" class="meta" style="margin-top:10px;"></p>
+    </form>
+</div>
+
+<div class="section">
+    <h2>How it works</h2>
+    <ul>
+        <li>Teacher opens Attendance and allows browser Location permission.</li>
+        <li>The server checks the teacher's GPS coordinates against this college point.</li>
+        <li>Only teachers inside the configured radius can save attendance.</li>
+        <li>The normal subject + teacher + lecture-time restrictions still apply.</li>
+    </ul>
+</div>
+
+<script>
+function captureCollegeLocation() {
+    const msg = document.getElementById("locationMessage");
+    if (!navigator.geolocation) {
+        msg.textContent = "This browser does not support location access.";
+        return;
+    }
+    msg.textContent = "Requesting your current location...";
+    navigator.geolocation.getCurrentPosition(function(position) {
+        document.getElementById("latitude").value = position.coords.latitude.toFixed(7);
+        document.getElementById("longitude").value = position.coords.longitude.toFixed(7);
+        document.getElementById("saveLocation").disabled = false;
+        msg.textContent = "Location captured. Verify that you are physically at the college, then save.";
+    }, function(error) {
+        msg.textContent = "Location access failed. Please allow Location in the browser site settings and try again.";
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+}
+</script>
+"""
+
+    return render_page(
+        content,
+        location=location,
+        page_title="College Location"
     )
 
 
