@@ -1968,8 +1968,8 @@ body{
     align-items:center;
     gap:23px;
     background:
-        radial-gradient(circle at 91% 28%,rgba(255,255,255,.16),transparent 25%),
-        linear-gradient(115deg,#087ef0 0%,#2859ed 54%,#7740ed 100%);
+        linear-gradient(90deg,rgba(7,111,229,.98) 0%,rgba(32,83,235,.94) 52%,rgba(100,52,229,.68) 100%),
+        url('{{ url_for('static', filename='college-building.png') }}') right center / 52% 100% no-repeat;
     color:#fff;
     box-shadow:0 11px 30px rgba(41,91,221,.20);
     position:relative;
@@ -2019,6 +2019,15 @@ body{
     font-size:clamp(27px,3vw,43px);
     line-height:1.08;
     letter-spacing:.15px;
+}
+
+.hero-institution{
+    margin:0 0 5px;
+    font-size:clamp(12px,1.15vw,16px);
+    line-height:1.2;
+    font-weight:850;
+    letter-spacing:.35px;
+    color:#fff;
 }
 
 .hero.dashboard-hero p{
@@ -2307,7 +2316,9 @@ body{
     }
 
     .hero-logo{width:72px;height:72px;flex-basis:72px}
+    .hero.dashboard-hero{background-position:center, right center; background-size:auto, 48% 100%;}
     .hero.dashboard-hero h1{font-size:22px}
+    .hero-institution{font-size:9px}
     .hero.dashboard-hero p{font-size:12px}
     .hero.dashboard-hero .time{font-size:11px}
 
@@ -2627,7 +2638,8 @@ def home():
     <img src="{{ url_for('static', filename='college-logo.png') }}"
          alt="College Logo" class="hero-logo">
     <div class="hero-copy">
-        <h1>SHRI GURU BUDDHISWAMI MAHAVIDYALAYA</h1>
+        <div class="hero-institution">SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S</div>
+        <h1>SGB COLLEGE</h1>
         <p>Timetable, live lecture and permanent attendance management</p>
         <div class="time" id="live-clock">India Time: {{ now_time }}</div>
     </div>
