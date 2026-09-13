@@ -2640,8 +2640,8 @@ def home():
     <div class="hero-copy">
         <div class="hero-institution">SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S</div>
         <h1>SGB COLLEGE</h1>
-        <p>Timetable, live lecture and permanent attendance management</p>
-        <div class="time" id="live-clock">India Time: {{ now_time }}</div>
+        <p>Timetable, live lecture and attendance management</p>
+        <div class="time" id="live-clock">Date  {{ now_time }}</div>
     </div>
 </div>
 
@@ -4274,7 +4274,7 @@ def reports():
 </form>
 
 <div class="section print-only">
-    <h2>SGB College Attendance Report</h2>
+    <h2>SGB College,Purna Attendance Report</h2>
     <p>
         {{ faculty }} • {{ year }}
         {% if class_name %} • {{ class_name }}{% endif %}
