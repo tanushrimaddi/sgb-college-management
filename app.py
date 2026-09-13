@@ -1255,283 +1255,889 @@ BASE_HTML = r"""
 <title>{{ page_title or "SGB College Management" }}</title>
 
 <style>
-
-:root{
-  --bg:#f5f8fc;
-  --surface:#ffffff;
-  --surface-2:#f8fafc;
-  --text:#18304f;
-  --muted:#71829a;
-  --border:#e4eaf2;
-  --nav:#071b3d;
-  --nav-2:#0d3777;
-  --primary:#246cf0;
-  --primary-2:#5a43e8;
-  --green:#18a66a;
-  --red:#e44958;
-  --orange:#f28a2e;
-  --purple:#7548e8;
-  --shadow:0 10px 28px rgba(24,48,79,.07);
-  --shadow-soft:0 5px 16px rgba(24,48,79,.06);
-  --radius:16px;
+:root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --text: #172033;
+    --muted: #667085;
+    --border: #e5e7eb;
+    --nav: #111827;
+    --primary: #2563eb;
+    --green: #16a34a;
+    --red: #dc2626;
+    --orange: #ea580c;
+    --purple: #7c3aed;
 }
 
-*{box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{
-  margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:Inter,"Segoe UI",Arial,sans-serif;
-  line-height:1.45;
-}
-a{color:inherit;text-decoration:none}
-button,input,select{font:inherit}
+* { box-sizing: border-box; }
 
-/* Sidebar */
-.navbar{
-  position:fixed;
-  inset:0 auto 0 0;
-  width:264px;
-  height:100vh;
-  padding:18px 14px;
-  background:linear-gradient(180deg,#061a3a 0%,#0b2d62 56%,#103b79 100%);
-  color:#fff;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  overflow:auto;
-  z-index:1100;
-  box-shadow:6px 0 24px rgba(8,28,60,.14);
-}
-.brand{
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:9px;
-  padding:5px 7px 17px;
-  border-bottom:1px solid rgba(255,255,255,.14);
-}
-.college-logo{
-  width:78px;height:78px;object-fit:contain;
-  border-radius:50%;background:#fff;padding:4px;
-  box-shadow:0 9px 24px rgba(0,0,0,.22);
-}
-.logo{
-  width:100%;
-  color:#fff;
-  font-size:18px;
-  font-weight:900;
-  text-align:center;
-  letter-spacing:.2px;
-}
-.logo small{
-  display:block;margin-top:4px;color:#c9d7ee;
-  font-size:9px;letter-spacing:1.05px;
-}
-.nav-links{display:flex;flex-direction:column;gap:6px;margin-top:3px}
-.nav-links a{
-  display:flex;align-items:center;gap:11px;
-  min-height:45px;padding:11px 13px;
-  border-radius:11px;
-  color:#deebfa;
-  font-size:13px;font-weight:800;
-  transition:.18s ease;
-}
-.nav-links a svg{width:21px;height:21px;flex:0 0 21px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
-.nav-links a:hover{background:rgba(71,132,240,.22);transform:translateX(2px)}
-.nav-links a.active{background:linear-gradient(135deg,#2d79f4,#4a60ed);box-shadow:0 8px 20px rgba(33,95,216,.25);color:#fff}
-
-/* Topbar */
-.sgb-topbar{
-  position:fixed;left:264px;right:0;top:0;height:66px;
-  padding:0 24px;
-  background:rgba(255,255,255,.96);
-  border-bottom:1px solid var(--border);
-  box-shadow:0 4px 16px rgba(24,48,79,.05);
-  display:flex;align-items:center;justify-content:space-between;
-  z-index:1000;
-  backdrop-filter:blur(10px);
-}
-.sgb-menu{width:39px;height:39px;border:0;border-radius:10px;background:#eef3fb;color:#244d84;cursor:pointer;font-size:20px}
-.sgb-topbar-right{display:flex;align-items:center;gap:18px}
-.sgb-bell{position:relative;font-size:20px;color:#1f477d}
-.sgb-bell::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;background:#ef3340;right:-1px;top:-1px}
-.sgb-user{display:flex;align-items:center;gap:9px;padding-left:16px;border-left:1px solid var(--border);font-weight:800;color:#23456f}
-.sgb-avatar{width:39px;height:39px;display:grid;place-items:center;border-radius:50%;background:#edf3fb;border:1px solid #d3dfef;font-size:20px}
-
-/* Main layout */
-.container{
-  width:calc(100% - 264px);
-  margin-left:264px;
-  padding:90px 32px 48px;
-  min-height:calc(100vh - 30px);
-}
-.footer{
-  margin-left:264px;
-  padding:22px 18px 28px;
-  text-align:center;
-  color:#7f8da1;font-size:12px;
-  background:var(--bg);
+body {
+    margin: 0;
+    font-family: Inter, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
 }
 
-/* Generic */
-.hero,.section,.filters,.dashboard-section,.dashboard-filters,.login-box{
-  background:var(--surface);
-  border:1px solid var(--border);
-  box-shadow:var(--shadow-soft);
-  border-radius:var(--radius);
+a {
+    color: inherit;
+    text-decoration: none;
 }
-.hero{margin-bottom:18px}
-.section{padding:19px;margin-bottom:18px}
-.filters{padding:17px;margin-bottom:18px}
-.report-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:13px}
-.report-title h2{margin:0;font-size:20px;line-height:1.2;color:#193a64}
 
-/* Hero */
-.dashboard-hero{
-  position:relative;min-height:224px;overflow:hidden;
-  padding:26px 30px;border:0;
-  display:flex;align-items:center;gap:22px;
-  color:#fff;
-  background:linear-gradient(118deg,#0c72ea 0%,#3158ec 55%,#7a3fec 100%);
-  box-shadow:0 14px 34px rgba(41,91,222,.20);
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    min-height: 64px;
+    padding: 10px 18px;
+    background: var(--nav);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
 }
-.dashboard-hero::before{
-  content:"";position:absolute;width:320px;height:320px;right:-95px;bottom:-205px;
-  border-radius:50%;border:65px solid rgba(255,255,255,.08)
-}
-.dashboard-hero::after{
-  content:"";position:absolute;width:270px;height:270px;right:-100px;top:-160px;
-  border-radius:50%;background:rgba(255,255,255,.08)
-}
-.hero-logo{width:116px;height:116px;flex:0 0 116px;object-fit:contain;border-radius:50%;background:#fff;padding:5px;z-index:4;box-shadow:0 8px 24px rgba(0,0,0,.16)}
-.hero-copy{position:relative;z-index:6;max-width:61%}
-.hero-org{font-size:14px;font-weight:800;letter-spacing:.5px;line-height:1.35;text-transform:uppercase;margin-bottom:4px}
-.dashboard-hero h1{margin:0 0 6px;font-size:clamp(29px,3.1vw,44px);line-height:1.05;letter-spacing:.2px}
-.hero-subtitle{margin:0;font-size:16px;font-weight:700;letter-spacing:.4px}
-.hero-time{margin-top:11px!important;font-size:14px!important;font-weight:800}
-.hero-campus-photo{position:absolute;right:0;top:0;bottom:0;width:40%;min-width:340px;overflow:hidden;z-index:2}
-.hero-campus-photo img{width:100%;height:100%;display:block;object-fit:cover;object-position:center 52%;filter:saturate(.86) contrast(.97)}
-.hero-campus-overlay{position:absolute;inset:0;background:linear-gradient(90deg,rgba(18,88,226,.98) 0%,rgba(44,81,231,.84) 22%,rgba(88,59,231,.42) 57%,rgba(124,55,236,.08) 100%)}
-.hero-campus-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.02),rgba(0,0,0,.12))}
 
-/* Filters */
-.dashboard-filters{padding:17px 20px;margin-bottom:18px}
-.filter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}
-label{display:block;margin:0 0 6px;color:#55708f;font-size:12px;font-weight:800}
-select,input{width:100%;border:1px solid #cfdbe9;border-radius:11px;background:#fff;color:#1d3a61;padding:11px 12px;outline:0}
-select:focus,input:focus{border-color:#6594ef;box-shadow:0 0 0 3px rgba(36,108,240,.10)}
+.logo {
+    font-weight: 900;
+    font-size: 18px;
+    white-space: nowrap;
+}
+
+.logo small {
+    display: block;
+    font-size: 9px;
+    color: #9ca3af;
+    letter-spacing: 1px;
+    margin-top: 2px;
+}
+
+.nav-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+}
+
+.nav-links a {
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.nav-links a:hover {
+    background: #1f2937;
+}
+
+.container {
+    width: min(1250px, 94%);
+    margin: auto;
+    padding: 20px 0 45px;
+}
+
+.hero {
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    color: white;
+    padding: 25px;
+    border-radius: 18px;
+    margin-bottom: 18px;
+}
+
+.hero h1 {
+    margin: 0 0 7px;
+    font-size: 28px;
+}
+
+.hero p {
+    margin: 0;
+    opacity: .9;
+}
+
+.hero .time {
+    color: white;
+    min-width: auto;
+    margin-top: 8px;
+}
+
+.card,
+.section,
+.filters,
+.stat {
+    background: var(--card);
+    border-radius: 14px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, .06);
+}
+
+.section {
+    padding: 18px;
+    margin-bottom: 18px;
+}
+
+.section h2 {
+    margin-top: 0;
+}
+
+.filters {
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+.filter-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 12px;
+}
+
+label {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+select,
+input {
+    width: 100%;
+    padding: 10px 11px;
+    border: 1px solid #d1d5db;
+    border-radius: 9px;
+    background: white;
+    font-size: 14px;
+}
+
+button,
+.btn {
+    display: inline-block;
+    border: 0;
+    border-radius: 9px;
+    padding: 10px 13px;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 13px;
+}
+
+.btn-blue { background: var(--primary); color: white; }
+.btn-green { background: var(--green); color: white; }
+.btn-red { background: var(--red); color: white; }
+.btn-orange { background: var(--orange); color: white; }
+.btn-purple { background: var(--purple); color: white; }
+.btn-gray { background: #e5e7eb; color: #172033; }
+
+.btn-small {
+    padding: 7px 9px;
+    font-size: 11px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+    gap: 11px;
+    margin-bottom: 18px;
+}
+
+.stat {
+    padding: 16px;
+}
+
+.stat-title {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    font-size: 25px;
+    font-weight: 900;
+    margin-top: 7px;
+}
+
+.green { color: var(--green); }
+.red { color: var(--red); }
+.orange { color: var(--orange); }
+.blue { color: var(--primary); }
+.purple { color: var(--purple); }
+
+.lecture {
+    border: 1px solid var(--border);
+    border-left: 5px solid #94a3b8;
+    border-radius: 11px;
+    padding: 13px;
+    margin-bottom: 9px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lecture.live {
+    background: #ecfdf3;
+    border-left-color: var(--green);
+}
+
+.lecture.next {
+    background: #eff6ff;
+    border-left-color: var(--primary);
+}
+
+.time {
+    min-width: 125px;
+    font-weight: 900;
+    color: var(--primary);
+}
+
+.subject {
+    flex: 1;
+    font-weight: 900;
+}
+
+.meta {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 5px 9px;
+    border-radius: 30px;
+    color: white;
+    font-size: 10px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.badge-live,
+.badge-taken { background: var(--green); }
+.badge-not { background: var(--red); }
+.badge-cancel { background: var(--orange); }
+.badge-next { background: var(--primary); }
+.badge-none { background: #64748b; }
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 760px;
+}
+
+th, td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    background: #f3f4f6;
+    font-size: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+td {
+    font-size: 13px;
+}
+
+.master-table th {
+    text-align: center;
+}
+
+.master-table td {
+    min-width: 150px;
+}
+
+.slot-cell {
+    background: #f8fafc;
+    font-weight: 900;
+    min-width: 125px !important;
+}
+
+.lecture-cell {
+    border-radius: 10px;
+    padding: 10px 8px;
+    margin-bottom: 7px;
+    text-align: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 7px rgba(15, 23, 42, 0.06);
+}
+
+.lecture-cell strong {
+    display: block;
+    font-size: 13px;
+    line-height: 1.35;
+    margin-bottom: 5px;
+}
+
+/* Consistent subject colors in the master timetable. */
+.lecture-cell.subject-blue { border-top: 4px solid #2563eb; }
+.lecture-cell.subject-purple { border-top: 4px solid #7c3aed; }
+.lecture-cell.subject-green { border-top: 4px solid #16a34a; }
+.lecture-cell.subject-orange { border-top: 4px solid #ea580c; }
+.lecture-cell.subject-teal { border-top: 4px solid #0d9488; }
+.lecture-cell.subject-olive { border-top: 4px solid #65a30d; }
+.lecture-cell.subject-pink { border-top: 4px solid #db2777; }
+.lecture-cell.subject-indigo { border-top: 4px solid #4f46e5; }
+.lecture-cell.subject-slate { border-top: 4px solid #64748b; }
+
+.lecture-cell .subject-name {
+    display: inline-block;
+    font-weight: 900;
+    padding: 5px 9px;
+    border-radius: 7px;
+    background: #f1f5f9;
+}
+
+.master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border: 1px solid #dbe3ef;
+    border-radius: 12px;
+}
+
+.master-table th {
+    text-align: center;
+    vertical-align: middle;
+    background: #eaf0ff;
+    color: #173b7a;
+    font-size: 13px;
+    font-weight: 900;
+    padding: 13px 10px;
+}
+
+.master-table td {
+    min-width: 155px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 9px;
+}
+
+.master-table .slot-cell {
+    background: #f1f5f9;
+    color: #1d4ed8;
+    text-align: center;
+    vertical-align: middle;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.master-table .meta {
+    text-align: center;
+    line-height: 1.35;
+}
+
+.current-cell {
+    background: #ecfdf3;
+    border: 1px solid #bbf7d0;
+}
+
+.progress {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 6px;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--green);
+}
+
+.alert {
+    padding: 11px 14px;
+    border-radius: 9px;
+    margin-bottom: 14px;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.empty {
+    text-align: center;
+    padding: 40px 15px;
+    color: var(--muted);
+}
+
+.login-box {
+    max-width: 430px;
+    margin: 50px auto;
+    padding: 25px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 3px 18px rgba(0,0,0,.08);
+}
+
+.footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 25px;
+}
+
+.attendance-locked,
+.attendance-disabled {
+    display: inline-block;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.attendance-locked {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.action-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.inline-form {
+    display: inline;
+}
+
+.print-only {
+    display: none;
+}
+
+.report-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media print {
+    .navbar,
+    .filters,
+    .no-print,
+    .footer {
+        display: none !important;
+    }
+
+    body {
+        background: white;
+    }
+
+    .container {
+        width: 100%;
+        padding: 0;
+    }
+
+    .section,
+    .stat,
+    .hero {
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+
+    .print-only {
+        display: block;
+    }
+
+    table {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 700px) {
+    .navbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .nav-links {
+        width: 100%;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+
+    .nav-links a {
+        white-space: nowrap;
+    }
+
+    .container {
+        width: 96%;
+    }
+
+    .hero h1 {
+        font-size: 23px;
+    }
+
+    .lecture {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .time {
+        min-width: auto;
+    }
+
+    .action-row .btn {
+        flex: 1;
+    }
+}
+
+
+/* =========================
+   SGB PROFESSIONAL SIDEBAR + DASHBOARD
+   ========================= */
+.navbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 255px;
+    height: 100vh;
+    min-height: 100vh;
+    padding: 18px 12px;
+    box-sizing: border-box;
+    background: linear-gradient(180deg, #071a38 0%, #0b2450 55%, #102d63 100%);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 14px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1000;
+    box-shadow: 4px 0 22px rgba(15,23,42,.16);
+}
+
+.brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 4px 4px 16px;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255,255,255,.18);
+}
+
+.college-logo {
+    width: 76px;
+    height: 76px;
+    object-fit: contain;
+    background: white;
+    border-radius: 50%;
+    padding: 4px;
+    box-shadow: 0 5px 18px rgba(0,0,0,.25);
+}
+
+.logo {
+    width: 100%;
+    box-sizing: border-box;
+    font-weight: 900;
+    font-size: 17px;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    color: #fff;
+}
+
+.logo small {
+    display: block;
+    font-size: 9px;
+    color: #cbd5e1;
+    letter-spacing: 1px;
+    margin-top: 5px;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+}
+
+.nav-links a {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 13px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #e5edf9;
+    text-decoration: none;
+    transition: all .18s ease;
+}
+
+.nav-links a:hover {
+    background: rgba(59,130,246,.30);
+    color: white;
+    transform: translateX(2px);
+}
+
+.nav-links a:first-child {
+    background: linear-gradient(135deg, #2563eb, #3b82f6);
+    color: #fff;
+    box-shadow: 0 5px 14px rgba(37,99,235,.25);
+}
+
+.container {
+    width: calc(100% - 255px);
+    max-width: none;
+    margin-left: 255px;
+    margin-right: 0;
+    padding: 28px 34px 55px;
+    box-sizing: border-box;
+    background: #f4f7fc;
+    min-height: calc(100vh - 40px);
+}
+
+.footer {
+    margin-left: 255px;
+    background: #f4f7fc;
+}
+
+/* Dashboard hero */
+.hero.dashboard-hero {
+    min-height: 142px;
+    padding: 18px 24px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    background: linear-gradient(120deg, #087ff5 0%, #2d55ef 52%, #7737ef 100%);
+    box-shadow: 0 10px 28px rgba(37,99,235,.17);
+    position: relative;
+    overflow: hidden;
+}
+
+.hero.dashboard-hero::after {
+    content: '';
+    position: absolute;
+    width: 270px;
+    height: 270px;
+    right: -90px;
+    top: -100px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.08);
+}
+
+.hero-logo {
+    width: 112px;
+    height: 112px;
+    flex: 0 0 112px;
+    object-fit: contain;
+    border-radius: 50%;
+    background: white;
+    padding: 5px;
+    box-sizing: border-box;
+    z-index: 1;
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 1;
+}
+
+.hero.dashboard-hero h1 {
+    margin: 0 0 5px;
+    font-size: clamp(25px, 3vw, 39px);
+    line-height: 1.12;
+    letter-spacing: .2px;
+}
+
+.hero.dashboard-hero p {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+.hero.dashboard-hero .time {
+    margin: 0;
+    font-weight: 800;
+    font-size: 15px;
+}
+
+/* Dashboard filters */
+.dashboard-filters {
+    padding: 16px;
+    border-radius: 16px;
+    background: white;
+    box-shadow: 0 5px 18px rgba(15,23,42,.06);
+    margin-bottom: 18px;
+}
+
+.dashboard-filters .filter-grid {
+    grid-template-columns: 1fr 1fr;
+}
+
+.dashboard-filters select {
+    height: 42px;
+    font-size: 14px;
+    font-weight: 600;
+}
 
 /* KPI cards */
-.dashboard-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:18px}
-.dashboard-stat{
-  min-height:116px;padding:17px 17px 15px 20px;position:relative;overflow:hidden;
-  border-radius:15px;border:1px solid #e0e8f2;background:#fff;box-shadow:var(--shadow-soft)
-}
-.dashboard-stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--primary)}
-.dashboard-stat.green-card::before{background:var(--green)}
-.dashboard-stat.red-card::before{background:var(--red)}
-.dashboard-stat.orange-card::before{background:var(--orange)}
-.dashboard-stat.purple-card::before{background:var(--purple)}
-.stat-icon{position:absolute;right:14px;top:12px;width:35px;height:35px;border-radius:10px;display:grid;place-items:center;background:#eef4ff;color:#3167c8;font-size:18px;font-weight:900}
-.green-card .stat-icon{background:#e8f8f0;color:#14925f}.red-card .stat-icon{background:#fdeced;color:#df4756}.orange-card .stat-icon{background:#fff1e5;color:#ed7e20}.purple-card .stat-icon{background:#f0ebff;color:#7042da}
-.stat-title{margin-top:4px;color:#71839a;font-size:10px;font-weight:900;letter-spacing:.75px}
-.stat-value{margin-top:9px;font-size:28px;font-weight:900;color:#173a66;line-height:1.05}
-.green{color:var(--green)!important}.red{color:var(--red)!important}.orange{color:var(--orange)!important}.blue{color:var(--primary)!important}.purple{color:var(--purple)!important}
-
-/* Sections and lecture rows */
-.dashboard-section{padding:18px;margin-bottom:18px}
-.lecture{display:flex;align-items:center;gap:14px;padding:13px 14px;margin-bottom:9px;border:1px solid var(--border);border-left:5px solid #a5b4c7;border-radius:12px;background:#fbfdff}
-.lecture.live{background:#f0fbf6;border-left-color:var(--green)}
-.lecture.next{background:#f1f6ff;border-left-color:var(--primary)}
-.time{min-width:130px;color:#2769d8;font-weight:900}
-.subject{flex:1;font-weight:900;color:#1c416c}.meta{margin-top:4px;color:#73849a;font-size:12px;font-weight:500}
-.badge{display:inline-flex;align-items:center;justify-content:center;padding:5px 9px;border-radius:999px;color:#fff;font-size:10px;font-weight:900;white-space:nowrap}
-.badge-live,.badge-taken{background:var(--green)}.badge-next{background:var(--primary)}.badge-not{background:var(--red)}.badge-cancel{background:var(--orange)}.badge-none{background:#71839a}
-.live-dot{display:inline-block;width:8px;height:8px;margin-right:7px;border-radius:50%;background:#23b66a;box-shadow:0 0 0 5px #e1f8eb;vertical-align:2px}
-.empty{text-align:center;padding:34px 16px;color:#8291a4}
-
-/* Buttons */
-button,.btn{display:inline-flex;align-items:center;justify-content:center;border:0;border-radius:10px;padding:10px 13px;cursor:pointer;font-size:12px;font-weight:900;transition:.18s ease}
-.btn:hover{transform:translateY(-1px)}
-.btn-blue{background:linear-gradient(135deg,#2b72ef,#4f5de7);color:#fff;box-shadow:0 6px 14px rgba(43,114,239,.18)}
-.btn-green{background:var(--green);color:#fff}.btn-red{background:var(--red);color:#fff}.btn-orange{background:var(--orange);color:#fff}.btn-purple{background:var(--purple);color:#fff}.btn-gray{background:#e9eef5;color:#284461}.btn-small{padding:7px 9px;font-size:11px}
-.action-row{display:flex;flex-wrap:wrap;gap:8px}
-
-/* Quick access */
-.quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.quick-action{min-height:64px;display:flex;align-items:center;justify-content:center;text-align:center;padding:14px;border:1px solid #dfe7f1;border-radius:12px;background:#fbfdff;color:#24486f;font-weight:900;box-shadow:0 4px 12px rgba(24,48,79,.04);transition:.18s ease}
-.quick-action:hover{background:#f2f7ff;border-color:#bfd3f4;transform:translateY(-2px)}
-
-/* Tables */
-.table-wrap{width:100%;overflow:auto;-webkit-overflow-scrolling:touch}
-table{width:100%;border-collapse:collapse;min-width:760px;background:#fff}
-th,td{padding:10px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top;font-size:13px}th{background:#f3f6fa;color:#3b5878;font-size:11px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0;z-index:2}
-.master-table{border-collapse:separate;border-spacing:0;border:1px solid #dce5f0;border-radius:13px;overflow:hidden}
-.master-table th{text-align:center;background:#edf3ff;color:#264b82;padding:12px 10px}.master-table td{text-align:center;vertical-align:middle;min-width:155px;padding:9px}.master-table .slot-cell{min-width:125px!important;background:#f5f8fc;color:#2760b7;font-weight:900;white-space:nowrap}
-.lecture-cell{border-radius:10px;padding:10px 8px;margin-bottom:7px;text-align:center;background:#fff;border:1px solid #dce5ee;box-shadow:0 2px 7px rgba(15,23,42,.05)}
-.lecture-cell strong{display:block;font-size:13px;line-height:1.35;margin-bottom:5px}.lecture-cell .subject-name{display:inline-block;padding:5px 8px;border-radius:7px;background:#edf2f8;font-weight:900}.lecture-cell .meta{text-align:center;color:#64788f}
-.subject-blue{background:#eef5ff!important;border-top:4px solid #2563eb!important}.subject-blue .subject-name{background:#dbeafe}.subject-purple{background:#f7f1ff!important;border-top:4px solid #7c3aed!important}.subject-purple .subject-name{background:#ede9fe}.subject-green{background:#eefbf4!important;border-top:4px solid #16a34a!important}.subject-green .subject-name{background:#dcfce7}.subject-orange{background:#fff6ea!important;border-top:4px solid #ea580c!important}.subject-orange .subject-name{background:#ffedd5}.subject-teal{background:#eafcf9!important;border-top:4px solid #0d9488!important}.subject-teal .subject-name{background:#ccfbf1}.subject-olive{background:#f4fbe9!important;border-top:4px solid #65a30d!important}.subject-olive .subject-name{background:#ecfccb}.subject-pink{background:#fff1f7!important;border-top:4px solid #db2777!important}.subject-pink .subject-name{background:#fce7f3}.subject-indigo{background:#eef2ff!important;border-top:4px solid #4f46e5!important}.subject-indigo .subject-name{background:#e0e7ff}.subject-slate{background:#f7f9fc!important;border-top:4px solid #64748b!important}.subject-slate .subject-name{background:#e9eef5}
-.current-cell{background:#ecfbf3!important;border-color:#bfeecf!important}
-
-/* Attendance / forms */
-.attendance-form{background:#fff}.attendance-locked,.attendance-disabled{display:inline-flex;align-items:center;padding:9px 12px;border-radius:9px;background:#eff4f9;color:#55708d;font-size:12px;font-weight:800}.attendance-locked{background:#e8f8f0;color:#138457}
-.progress{height:8px;background:#e6ecf2;border-radius:999px;overflow:hidden;margin-top:7px}.progress-bar{height:100%;background:var(--green)}
-.alert{padding:11px 13px;margin-bottom:14px;border-radius:10px;background:#eef5ff;color:#2459a0;border:1px solid #dbe8fb;font-size:13px}
-
-/* Login */
-.login-box{max-width:430px;margin:55px auto;padding:28px}.login-box h1{margin-top:0;color:#1b477b}
-
-.print-only{display:none}
-@media print{
- .navbar,.sgb-topbar,.filters,.dashboard-filters,.no-print,.footer{display:none!important}
- .container{width:100%;margin:0;padding:0}.print-only{display:block}
- body{background:#fff}.section,.dashboard-section,.dashboard-stat,.hero{box-shadow:none;border:1px solid #ddd}
- table{min-width:0}
+.dashboard-cards {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
 }
 
-/* Responsive */
-@media (max-width:1180px){
- .dashboard-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
- .hero-campus-photo{width:34%;min-width:250px}
- .hero-copy{max-width:69%}
-}
-@media (max-width:900px){
- .navbar{width:225px}.sgb-topbar{left:225px}.container{width:calc(100% - 225px);margin-left:225px;padding-left:20px;padding-right:20px}.footer{margin-left:225px}.dashboard-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.quick-actions{grid-template-columns:1fr 1fr}
-}
-@media (max-width:700px){
- .navbar{position:relative;width:100%;height:auto;min-height:0;padding:12px;overflow:visible}.brand{flex-direction:row;justify-content:flex-start;padding:3px 5px 12px;text-align:left}.college-logo{width:57px;height:57px}.logo{text-align:left;font-size:15px}.nav-links{flex-direction:row;flex-wrap:wrap;gap:5px}.nav-links a{width:auto;min-height:39px;font-size:11px;padding:8px 10px}.nav-links a svg{width:18px;height:18px;flex-basis:18px}
- .sgb-topbar{position:relative;left:auto;height:56px;padding:0 12px}.sgb-user{font-size:12px;padding-left:9px}.sgb-avatar{width:33px;height:33px;font-size:17px}
- .container{width:96%;margin:0 auto;padding:15px 0 32px}.footer{margin-left:0}
- .dashboard-hero{min-height:200px;padding:19px;gap:13px}.hero-logo{width:76px;height:76px;flex-basis:76px}.hero-campus-photo{width:100%;min-width:0;opacity:.26}.hero-campus-overlay{background:linear-gradient(90deg,rgba(15,91,226,.98),rgba(104,55,235,.9))}.hero-copy{max-width:100%}.hero-org{font-size:9px}.dashboard-hero h1{font-size:30px}.hero-subtitle{font-size:14px}.dashboard-hero p{font-size:12px}
- .filter-grid{grid-template-columns:1fr}.dashboard-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.dashboard-stat{min-height:95px;padding:14px}.stat-value{font-size:24px}
- .lecture{flex-direction:column;align-items:flex-start}.time{min-width:auto}.quick-actions{grid-template-columns:1fr}.action-row .btn{flex:1}
-}
-@media (max-width:420px){.dashboard-cards{grid-template-columns:1fr}.dashboard-hero h1{font-size:27px}.hero-logo{width:66px;height:66px;flex-basis:66px}.sgb-topbar-right{gap:9px}.sgb-user span:last-child{display:none}}
-
-@media (max-width:700px){
-  body.sidebar-open .navbar{display:flex;position:fixed;inset:0 auto 0 0;width:272px;height:100vh;z-index:1200;box-shadow:10px 0 30px rgba(0,0,0,.22)}
-  body.sidebar-open::after{content:"";position:fixed;inset:0;background:rgba(8,25,52,.45);z-index:1150}
+.dashboard-stat {
+    background: #fff;
+    border-radius: 16px;
+    padding: 17px 16px;
+    min-height: 92px;
+    box-sizing: border-box;
+    box-shadow: 0 5px 18px rgba(15,23,42,.06);
+    border: 1px solid #edf1f7;
+    position: relative;
+    overflow: hidden;
 }
 
+.dashboard-stat::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #2563eb;
+}
+
+.dashboard-stat.green-card::before { background: #16a34a; }
+.dashboard-stat.red-card::before { background: #dc2626; }
+.dashboard-stat.orange-card::before { background: #f97316; }
+.dashboard-stat.purple-card::before { background: #7c3aed; }
+
+.dashboard-stat .stat-title {
+    font-size: 10px;
+    letter-spacing: .3px;
+}
+
+.dashboard-stat .stat-value {
+    font-size: 25px;
+    margin-top: 10px;
+}
+
+/* Live sections */
+.dashboard-section {
+    background: white;
+    border-radius: 17px;
+    padding: 18px;
+    margin-bottom: 18px;
+    box-shadow: 0 5px 18px rgba(15,23,42,.06);
+    border: 1px solid #edf1f7;
+}
+
+.dashboard-section .report-title h2 {
+    margin: 0;
+    font-size: 21px;
+}
+
+.dashboard-section .lecture {
+    margin-top: 13px;
+    margin-bottom: 0;
+    padding: 15px;
+    border-radius: 13px;
+}
+
+.live-dot {
+    width: 13px;
+    height: 13px;
+    display: inline-block;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 0 5px #dcfce7;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.quick-action {
+    display: block;
+    text-decoration: none;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 13px;
+    padding: 14px;
+    color: #172033;
+    font-weight: 900;
+    transition: .18s ease;
+}
+
+.quick-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px rgba(15,23,42,.08);
+}
+
+@media (max-width: 1200px) {
+    .dashboard-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) and (min-width: 701px) {
+    .navbar { width: 220px; }
+    .container { width: calc(100% - 220px); margin-left: 220px; padding: 22px; }
+    .footer { margin-left: 220px; }
+    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .hero-logo { width: 88px; height: 88px; flex-basis: 88px; }
+}
+
+@media (max-width: 700px) {
+    .navbar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        padding: 12px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .brand { flex-direction: row; justify-content: flex-start; padding: 3px 5px 10px; }
+    .college-logo { width: 55px; height: 55px; }
+    .logo { text-align: left; font-size: 15px; }
+    .logo small { font-size: 8px; }
+
+    .nav-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        overflow-x: visible;
+    }
+
+    .nav-links a { width: auto; font-size: 12px; padding: 9px 10px; }
+    .container { width: 96%; margin-left: auto; margin-right: auto; padding: 15px 0 35px; }
+    .footer { margin-left: 0; }
+
+    .hero.dashboard-hero { align-items: flex-start; padding: 18px; gap: 13px; }
+    .hero-logo { width: 72px; height: 72px; flex-basis: 72px; }
+    .hero.dashboard-hero h1 { font-size: 23px; }
+    .hero.dashboard-hero p { font-size: 13px; }
+    .hero.dashboard-hero .time { font-size: 12px; }
+
+    .dashboard-filters .filter-grid { grid-template-columns: 1fr; }
+    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .dashboard-stat { min-height: 86px; padding: 14px; }
+    .quick-actions { grid-template-columns: 1fr; }
+}
 </style>
 
 <script>
-function toggleSidebar() {
-    document.body.classList.toggle("sidebar-open");
-}
-
-function closeSidebarOnMobile() {
-    if (window.innerWidth <= 700) document.body.classList.remove("sidebar-open");
-}
-
-document.addEventListener("click", function (event) {
-    const link = event.target.closest(".nav-links a");
-    if (link) closeSidebarOnMobile();
-});
-
 function reloadLiveLecture() {
     const box = document.getElementById("live-data");
     if (!box) return;
@@ -1635,39 +2241,26 @@ setInterval(reloadLiveLecture, 15000);
     </a>
 
     <div class="nav-links">
-        <a class="{% if request.endpoint == 'home' %}active{% endif %}" href="{{ url_for('home') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 19.5z"/><path d="M9 21v-6h6v6"/></svg> Dashboard</a>
-        <a class="{% if request.endpoint == 'master_timetable' %}active{% endif %}" href="{{ url_for('master_timetable') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8"/></svg> All Classes</a>
-        <a class="{% if request.endpoint == 'timetable_page' %}active{% endif %}" href="{{ url_for('timetable_page') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 9h18M7 13h3M14 13h3M7 17h3"/></svg> Daily Timetable</a>
+        <a href="{{ url_for('home') }}">🏠 Dashboard</a>
+        <a href="{{ url_for('master_timetable') }}">📚 All Classes</a>
+        <a href="{{ url_for('timetable_page') }}">📅 Daily Timetable</a>
 
         {% if current_user_obj and current_user_obj.is_admin %}
-            <a class="{% if request.endpoint == 'attendance' %}active{% endif %}" href="{{ url_for('attendance') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Attendance</a>
-            <a class="{% if request.endpoint == 'reports' %}active{% endif %}" href="{{ url_for('reports') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Reports</a>
-            <a class="{% if request.endpoint == 'access_control' %}active{% endif %}" href="{{ url_for('access_control') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15c2.8-.2 5.5 1.7 5.5 5"/></svg> Users</a>
-            <a class="{% if request.endpoint == 'college_location' %}active{% endif %}" href="{{ url_for('college_location') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg> College Location</a>
-            <a class="{% if request.endpoint == 'timetable_manage' %}active{% endif %}" href="{{ url_for('timetable_manage') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3 .5 2a7.5 7.5 0 0 1 4 0l.5-2 2.1.9-.8 1.9a8 8 0 0 1 2.8 2.8l1.9-.8.9 2.1-2 .5a7.5 7.5 0 0 1 0 4l2 .5-.9 2.1-1.9-.8a8 8 0 0 1-2.8 2.8l.8 1.9-2.1.9-.5-2a7.5 7.5 0 0 1-4 0l-.5 2-2.1-.9.8-1.9a8 8 0 0 1-2.8-2.8l-1.9.8-.9-2.1 2-.5a7.5 7.5 0 0 1 0-4l-2-.5.9-2.1 1.9.8A8 8 0 0 1 7.3 7.8L6.5 5.9z"/><circle cx="12" cy="12" r="3"/></svg> Manage Timetable</a>
-            <a href="{{ url_for('logout') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 8l4 4-4 4M8 12h10"/></svg> Logout</a>
+            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
+            <a href="{{ url_for('reports') }}">📊 Reports</a>
+            <a href="{{ url_for('access_control') }}">👥 Users</a>
+            <a href="{{ url_for('college_location') }}">📍 College Location</a>
+            <a href="{{ url_for('timetable_manage') }}">⚙ Manage Timetable</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
         {% elif current_user_obj and current_user_obj.assigned_subject %}
-            <a class="{% if request.endpoint == 'attendance' %}active{% endif %}" href="{{ url_for('attendance') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Attendance</a>
-            <a href="{{ url_for('logout') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 8l4 4-4 4M8 12h10"/></svg> Logout</a>
+            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
+            <a href="{{ url_for('logout') }}">🚪 Logout</a>
         {% else %}
-            <a href="{{ url_for('login') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Login</a>
+            <a href="{{ url_for('login') }}">🔐 Login</a>
         {% endif %}
     </div>
 
 </nav>
-
-<header class="sgb-topbar">
-    <div class="sgb-topbar-left">
-        <button class="sgb-menu" type="button" aria-label="Menu" onclick="toggleSidebar()">☰</button>
-    </div>
-    <div class="sgb-topbar-right">
-        <span class="sgb-bell" aria-label="Notifications">🔔</span>
-        <div class="sgb-user">
-            <span class="sgb-avatar">👤</span>
-            <span>{{ current_user_obj.name if current_user_obj else "Guest" }}</span>
-        </div>
-    </div>
-</header>
 
 <div class="container">
 
@@ -1769,15 +2362,9 @@ def home():
     <img src="{{ url_for('static', filename='college-logo.png') }}"
          alt="College Logo" class="hero-logo">
     <div class="hero-copy">
-        <div class="hero-org">SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S</div>
-        <h1>SGB COLLEGE</h1>
-        <p class="hero-subtitle">COLLEGE MANAGEMENT SYSTEM</p>
-        <p style="margin-top:6px;">Timetable, live lecture and permanent attendance management</p>
-        <div class="time hero-time" id="live-clock">◷ &nbsp; India Time: {{ now_time }}</div>
-    </div>
-    <div class="hero-campus-photo" aria-label="SGB College Campus">
-        <img src="{{ url_for('static', filename='college-building.jpg') }}" alt="SGB College Campus">
-        <div class="hero-campus-overlay"></div>
+        <h1>SHRI GURU BUDDHISWAMI MAHAVIDYALAYA</h1>
+        <p>Timetable, live lecture and permanent attendance management</p>
+        <div class="time" id="live-clock">India Time: {{ now_time }}</div>
     </div>
 </div>
 
@@ -1806,38 +2393,31 @@ def home():
 
 <div class="dashboard-cards">
     <div class="dashboard-stat green-card">
-        <div class="stat-icon">◫</div>
-        <div class="stat-title">CURRENT LECTURE</div>
+        <div class="stat-title">Current Lecture</div>
         <div class="stat-value green">{% if current %}LIVE{% else %}—{% endif %}</div>
     </div>
-    <div class="dashboard-stat blue-card">
-        <div class="stat-icon">≫</div>
-        <div class="stat-title">NEXT LECTURE</div>
+    <div class="dashboard-stat">
+        <div class="stat-title">Next Lecture</div>
         <div class="stat-value blue">{% if upcoming %}{{ upcoming[0].slot }}{% else %}—{% endif %}</div>
     </div>
     <div class="dashboard-stat purple-card">
-        <div class="stat-icon">▦</div>
-        <div class="stat-title">TODAY'S LECTURES</div>
+        <div class="stat-title">Today's Lectures</div>
         <div class="stat-value purple">{{ today_rows|length }}</div>
     </div>
     <div class="dashboard-stat green-card">
-        <div class="stat-icon">✓</div>
-        <div class="stat-title">TAKEN TODAY</div>
+        <div class="stat-title">Taken Today</div>
         <div class="stat-value green">{{ stats.taken }}</div>
     </div>
     <div class="dashboard-stat red-card">
-        <div class="stat-icon">×</div>
-        <div class="stat-title">NOT TAKEN</div>
+        <div class="stat-title">Not Taken</div>
         <div class="stat-value red">{{ stats.not_taken }}</div>
     </div>
     <div class="dashboard-stat orange-card">
-        <div class="stat-icon">⊘</div>
-        <div class="stat-title">CANCELLED</div>
+        <div class="stat-title">Cancelled</div>
         <div class="stat-value orange">{{ stats.cancelled }}</div>
     </div>
     <div class="dashboard-stat purple-card">
-        <div class="stat-icon">%</div>
-        <div class="stat-title">ATTENDANCE %</div>
+        <div class="stat-title">Attendance %</div>
         <div class="stat-value blue">{{ "%.1f"|format(stats.percentage) }}%</div>
     </div>
 </div>
@@ -2038,7 +2618,7 @@ def api_live():
 # ============================================================
 
 def short_subject_label(value):
-    """Compact timetable labels while preserving the actual subject text."""
+    """Make timetable category labels compact and consistent for display."""
     import re
     text = str(value or "").strip()
     text = re.sub(r"^Major\s*:", "Maj:", text, flags=re.IGNORECASE)
@@ -2049,28 +2629,19 @@ def short_subject_label(value):
 
 
 def subject_color_class(value):
-    """Stable subject color; also recognizes labels such as 'Practical: Physics'."""
-    import re
+    """Return a stable color class so the same subject keeps the same color."""
     key = normalize_subject(value) if 'normalize_subject' in globals() else str(value or '').strip().lower()
-    key = re.sub(r"^maj:\s*", "", key)
-    key = re.sub(r"^min:\s*", "", key)
-    if "physics" in key:
-        return "subject-blue"
-    if "chemistry" in key:
-        return "subject-purple"
-    if "computer science" in key or key == "comp sci" or "computer" in key:
-        return "subject-green"
-    if "mathematics" in key or key == "math":
-        return "subject-orange"
-    if "microbiology" in key or key == "micro" or "microbiology" in key:
-        return "subject-teal"
-    if "botany" in key:
-        return "subject-olive"
-    if "zoology" in key:
-        return "subject-pink"
-    if "english" in key:
-        return "subject-indigo"
-    return "subject-slate"
+    colors = {
+        "physics": "subject-blue",
+        "chemistry": "subject-purple",
+        "computer science": "subject-green",
+        "mathematics": "subject-orange",
+        "microbiology": "subject-teal",
+        "botany": "subject-olive",
+        "zoology": "subject-pink",
+        "english": "subject-indigo",
+    }
+    return colors.get(key, "subject-slate")
 
 
 # ============================================================
