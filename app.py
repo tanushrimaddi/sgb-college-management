@@ -1792,349 +1792,539 @@ td {
 
 
 /* =========================
-   SGB PROFESSIONAL SIDEBAR + DASHBOARD
+   SGB MODERN COLLEGE DASHBOARD
    ========================= */
-.navbar {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 255px;
-    height: 100vh;
-    min-height: 100vh;
-    padding: 18px 12px;
-    box-sizing: border-box;
-    background: linear-gradient(180deg, #071a38 0%, #0b2450 55%, #102d63 100%);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    justify-content: flex-start;
-    gap: 14px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    z-index: 1000;
-    box-shadow: 4px 0 22px rgba(15,23,42,.16);
+
+:root{
+    --bg:#eef4fb;
+    --card:#ffffff;
+    --text:#17345f;
+    --muted:#687b98;
+    --border:#dce7f3;
+    --nav:#092a59;
+    --nav2:#0b3773;
+    --primary:#1677ee;
+    --primary2:#3157ed;
+    --green:#16a66a;
+    --red:#e52d4f;
+    --orange:#f28a19;
+    --purple:#7044dc;
 }
 
-.brand {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 4px 4px 16px;
-    text-decoration: none;
-    border-bottom: 1px solid rgba(255,255,255,.18);
+body{
+    background:
+        radial-gradient(circle at 88% 8%, rgba(52,112,235,.09), transparent 24%),
+        linear-gradient(135deg,#f5f9ff 0%,#edf4fb 55%,#e9f1fb 100%);
+    color:var(--text);
+    font-family:Inter,Segoe UI,Arial,sans-serif;
 }
 
-.college-logo {
-    width: 76px;
-    height: 76px;
-    object-fit: contain;
-    background: white;
-    border-radius: 50%;
-    padding: 4px;
-    box-shadow: 0 5px 18px rgba(0,0,0,.25);
+.navbar{
+    position:fixed;
+    left:0;
+    top:0;
+    width:290px;
+    height:100vh;
+    min-height:100vh;
+    padding:20px 14px 16px;
+    background:linear-gradient(180deg,#082654 0%,#0b326b 55%,#092c60 100%);
+    color:white;
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    justify-content:flex-start;
+    gap:16px;
+    overflow-y:auto;
+    overflow-x:hidden;
+    z-index:1000;
+    box-shadow:5px 0 24px rgba(20,55,100,.14);
 }
 
-.logo {
-    width: 100%;
-    box-sizing: border-box;
-    font-weight: 900;
-    font-size: 17px;
-    line-height: 1.25;
-    text-align: center;
-    white-space: normal;
-    overflow-wrap: anywhere;
-    color: #fff;
+.brand{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:9px;
+    padding:2px 7px 19px;
+    border-bottom:1px solid rgba(255,255,255,.18);
 }
 
-.logo small {
-    display: block;
-    font-size: 9px;
-    color: #cbd5e1;
-    letter-spacing: 1px;
-    margin-top: 5px;
+.college-logo{
+    width:92px;
+    height:92px;
+    object-fit:contain;
+    background:#fff;
+    border-radius:50%;
+    padding:5px;
+    box-shadow:0 7px 20px rgba(0,0,0,.22);
 }
 
-.nav-links {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-    width: 100%;
+.logo{
+    width:100%;
+    color:#fff;
+    font-weight:900;
+    font-size:20px;
+    line-height:1.15;
+    text-align:center;
+    letter-spacing:.2px;
 }
 
-.nav-links a {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    box-sizing: border-box;
-    padding: 12px 13px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 800;
-    color: #e5edf9;
-    text-decoration: none;
-    transition: all .18s ease;
+.logo small{
+    display:block;
+    margin-top:7px;
+    color:#cfe0f7;
+    font-size:10px;
+    letter-spacing:1.1px;
 }
 
-.nav-links a:hover {
-    background: rgba(59,130,246,.30);
-    color: white;
-    transform: translateX(2px);
+.nav-links{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    width:100%;
 }
 
-.nav-links a:first-child {
-    background: linear-gradient(135deg, #2563eb, #3b82f6);
-    color: #fff;
-    box-shadow: 0 5px 14px rgba(37,99,235,.25);
+.nav-links a{
+    display:flex;
+    align-items:center;
+    gap:13px;
+    width:100%;
+    min-height:48px;
+    padding:11px 14px;
+    border-radius:11px;
+    color:#eaf2ff;
+    font-size:14px;
+    font-weight:750;
+    text-decoration:none;
+    transition:all .18s ease;
 }
 
-.container {
-    width: calc(100% - 255px);
-    max-width: none;
-    margin-left: 255px;
-    margin-right: 0;
-    padding: 28px 34px 55px;
-    box-sizing: border-box;
-    background: #f4f7fc;
-    min-height: calc(100vh - 40px);
+.nav-links a:hover{
+    background:rgba(74,145,255,.20);
+    color:#fff;
+    transform:translateX(2px);
 }
 
-.footer {
-    margin-left: 255px;
-    background: #f4f7fc;
+.nav-links a:first-child{
+    background:linear-gradient(135deg,#147cf0,#2f63ed);
+    color:#fff;
+    box-shadow:0 6px 16px rgba(30,105,235,.28);
 }
 
-/* Dashboard hero */
-.hero.dashboard-hero {
-    min-height: 142px;
-    padding: 18px 24px;
-    border-radius: 20px;
-    display: flex;
-    align-items: center;
-    gap: 22px;
-    background: linear-gradient(120deg, #087ff5 0%, #2d55ef 52%, #7737ef 100%);
-    box-shadow: 0 10px 28px rgba(37,99,235,.17);
-    position: relative;
-    overflow: hidden;
+.nav-icon{
+    width:22px;
+    height:22px;
+    flex:0 0 22px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    color:currentColor;
 }
 
-.hero.dashboard-hero::after {
-    content: '';
-    position: absolute;
-    width: 270px;
-    height: 270px;
-    right: -90px;
-    top: -100px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.08);
+.nav-icon svg{
+    width:21px;
+    height:21px;
+    stroke:currentColor;
+    fill:none;
+    stroke-width:2;
+    stroke-linecap:round;
+    stroke-linejoin:round;
 }
 
-.hero-logo {
-    width: 112px;
-    height: 112px;
-    flex: 0 0 112px;
-    object-fit: contain;
-    border-radius: 50%;
-    background: white;
-    padding: 5px;
-    box-sizing: border-box;
-    z-index: 1;
+.nav-footer{
+    margin-top:auto;
+    padding:17px 8px 3px;
+    border-top:1px solid rgba(255,255,255,.14);
+    text-align:center;
+    color:#d5e2f5;
+    font-size:11px;
+    line-height:1.5;
 }
 
-.hero-copy {
-    position: relative;
-    z-index: 1;
+.container{
+    width:calc(100% - 290px);
+    max-width:none;
+    margin-left:290px;
+    margin-right:0;
+    padding:30px 34px 50px;
+    min-height:100vh;
+    background:transparent;
 }
 
-.hero.dashboard-hero h1 {
-    margin: 0 0 5px;
-    font-size: clamp(25px, 3vw, 39px);
-    line-height: 1.12;
-    letter-spacing: .2px;
+.footer{
+    margin-left:290px;
+    background:transparent;
+    color:#71829a;
+    padding:15px 20px 25px;
 }
 
-.hero.dashboard-hero p {
-    margin: 0 0 8px;
-    font-size: 16px;
+/* Hero */
+.hero.dashboard-hero{
+    min-height:164px;
+    padding:20px 28px;
+    border-radius:20px;
+    display:flex;
+    align-items:center;
+    gap:23px;
+    background:
+        radial-gradient(circle at 91% 28%,rgba(255,255,255,.16),transparent 25%),
+        linear-gradient(115deg,#087ef0 0%,#2859ed 54%,#7740ed 100%);
+    color:#fff;
+    box-shadow:0 11px 30px rgba(41,91,221,.20);
+    position:relative;
+    overflow:hidden;
 }
 
-.hero.dashboard-hero .time {
-    margin: 0;
-    font-weight: 800;
-    font-size: 15px;
+.hero.dashboard-hero:before{
+    content:"";
+    position:absolute;
+    width:260px;
+    height:260px;
+    right:-100px;
+    top:-125px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:50%;
 }
 
-/* Dashboard filters */
-.dashboard-filters {
-    padding: 16px;
-    border-radius: 16px;
-    background: white;
-    box-shadow: 0 5px 18px rgba(15,23,42,.06);
-    margin-bottom: 18px;
+.hero.dashboard-hero:after{
+    content:"";
+    position:absolute;
+    width:150px;
+    height:150px;
+    left:-75px;
+    bottom:-90px;
+    border-radius:50%;
+    background:rgba(255,255,255,.07);
 }
 
-.dashboard-filters .filter-grid {
-    grid-template-columns: 1fr 1fr;
+.hero-logo{
+    width:118px;
+    height:118px;
+    flex:0 0 118px;
+    object-fit:contain;
+    border-radius:50%;
+    background:#fff;
+    padding:5px;
+    z-index:1;
 }
 
-.dashboard-filters select {
-    height: 42px;
-    font-size: 14px;
-    font-weight: 600;
+.hero-copy{
+    position:relative;
+    z-index:1;
 }
 
-/* KPI cards */
-.dashboard-cards {
-    display: grid;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 12px;
-    margin-bottom: 18px;
+.hero.dashboard-hero h1{
+    margin:0 0 5px;
+    font-size:clamp(27px,3vw,43px);
+    line-height:1.08;
+    letter-spacing:.15px;
 }
 
-.dashboard-stat {
-    background: #fff;
-    border-radius: 16px;
-    padding: 17px 16px;
-    min-height: 92px;
-    box-sizing: border-box;
-    box-shadow: 0 5px 18px rgba(15,23,42,.06);
-    border: 1px solid #edf1f7;
-    position: relative;
-    overflow: hidden;
+.hero.dashboard-hero p{
+    margin:0 0 9px;
+    font-size:16px;
+    opacity:.96;
 }
 
-.dashboard-stat::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: #2563eb;
+.hero.dashboard-hero .time{
+    margin:0;
+    font-weight:800;
+    font-size:15px;
+    color:#fff;
 }
 
-.dashboard-stat.green-card::before { background: #16a34a; }
-.dashboard-stat.red-card::before { background: #dc2626; }
-.dashboard-stat.orange-card::before { background: #f97316; }
-.dashboard-stat.purple-card::before { background: #7c3aed; }
-
-.dashboard-stat .stat-title {
-    font-size: 10px;
-    letter-spacing: .3px;
+/* Filters */
+.dashboard-filters{
+    padding:17px 20px;
+    border:1px solid var(--border);
+    border-radius:17px;
+    background:#fff;
+    box-shadow:0 5px 18px rgba(30,65,110,.06);
+    margin-bottom:19px;
 }
 
-.dashboard-stat .stat-value {
-    font-size: 25px;
-    margin-top: 10px;
+.dashboard-filters .filter-grid{
+    grid-template-columns:1fr 1fr;
+    gap:18px;
 }
 
-/* Live sections */
-.dashboard-section {
-    background: white;
-    border-radius: 17px;
-    padding: 18px;
-    margin-bottom: 18px;
-    box-shadow: 0 5px 18px rgba(15,23,42,.06);
-    border: 1px solid #edf1f7;
+.dashboard-filters label{
+    color:#294a78;
+    font-size:13px;
+    font-weight:800;
 }
 
-.dashboard-section .report-title h2 {
-    margin: 0;
-    font-size: 21px;
+.dashboard-filters select{
+    height:46px;
+    border:1px solid #cddbeb;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:650;
+    color:#17345f;
+    outline:none;
+    transition:.15s;
 }
 
-.dashboard-section .lecture {
-    margin-top: 13px;
-    margin-bottom: 0;
-    padding: 15px;
-    border-radius: 13px;
+.dashboard-filters select:focus{
+    border-color:#4a8df4;
+    box-shadow:0 0 0 3px rgba(74,141,244,.12);
 }
 
-.live-dot {
-    width: 13px;
-    height: 13px;
-    display: inline-block;
-    border-radius: 50%;
-    background: #22c55e;
-    box-shadow: 0 0 0 5px #dcfce7;
-    margin-right: 8px;
-    vertical-align: middle;
+/* Statistics */
+.dashboard-cards{
+    display:grid;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:14px;
+    margin-bottom:19px;
 }
 
-.quick-actions {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
+.dashboard-stat{
+    background:#fff;
+    border:1px solid #e1eaf4;
+    border-radius:16px;
+    padding:16px 17px;
+    min-height:100px;
+    box-shadow:0 6px 18px rgba(24,61,105,.055);
+    position:relative;
+    overflow:hidden;
 }
 
-.quick-action {
-    display: block;
-    text-decoration: none;
-    background: #f8fafc;
-    border: 1px solid #e5e7eb;
-    border-radius: 13px;
-    padding: 14px;
-    color: #172033;
-    font-weight: 900;
-    transition: .18s ease;
+.dashboard-stat:before{
+    content:"";
+    position:absolute;
+    left:0;
+    top:0;
+    bottom:0;
+    width:4px;
+    background:#2879ed;
 }
 
-.quick-action:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(15,23,42,.08);
+.dashboard-stat.green-card:before{background:#16a66a}
+.dashboard-stat.red-card:before{background:#e52d4f}
+.dashboard-stat.orange-card:before{background:#f28a19}
+.dashboard-stat.purple-card:before{background:#7044dc}
+
+.dashboard-stat .stat-title{
+    color:#667b98;
+    font-size:10px;
+    letter-spacing:.45px;
+    font-weight:900;
 }
 
-@media (max-width: 1200px) {
-    .dashboard-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dashboard-stat .stat-value{
+    font-size:26px;
+    margin-top:11px;
+    font-weight:900;
 }
 
-@media (max-width: 900px) and (min-width: 701px) {
-    .navbar { width: 220px; }
-    .container { width: calc(100% - 220px); margin-left: 220px; padding: 22px; }
-    .footer { margin-left: 220px; }
-    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .hero-logo { width: 88px; height: 88px; flex-basis: 88px; }
+/* Sections */
+.dashboard-section{
+    background:#fff;
+    border:1px solid #e0e9f3;
+    border-radius:18px;
+    padding:19px;
+    margin-bottom:19px;
+    box-shadow:0 6px 19px rgba(25,61,104,.055);
 }
 
-@media (max-width: 700px) {
-    .navbar {
-        position: relative;
-        width: 100%;
-        height: auto;
-        min-height: auto;
-        padding: 12px;
-        flex-direction: column;
-        gap: 10px;
+.dashboard-section .report-title h2{
+    margin:0;
+    color:#18375f;
+    font-size:21px;
+}
+
+.dashboard-section .lecture{
+    margin-top:13px;
+    margin-bottom:0;
+    padding:15px 16px;
+    border-radius:13px;
+}
+
+.live-dot{
+    width:12px;
+    height:12px;
+    display:inline-block;
+    border-radius:50%;
+    background:#20bf73;
+    box-shadow:0 0 0 5px #dcf8ea;
+    margin-right:9px;
+    vertical-align:middle;
+}
+
+.quick-actions{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:12px;
+}
+
+.quick-action{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    text-decoration:none;
+    background:#f6f9fd;
+    border:1px solid #dce6f1;
+    border-radius:13px;
+    padding:14px;
+    color:#21446f;
+    font-weight:850;
+    transition:.18s ease;
+}
+
+.quick-action:hover{
+    transform:translateY(-2px);
+    background:#eef5ff;
+    box-shadow:0 8px 18px rgba(30,75,125,.08);
+}
+
+/* Common elements */
+.card,.section,.filters,.stat{
+    box-shadow:0 4px 15px rgba(24,61,105,.055);
+}
+
+.lecture{
+    border:1px solid #e0e8f1;
+    border-left:5px solid #9db0c8;
+    border-radius:11px;
+    padding:13px;
+    margin-bottom:9px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:#fff;
+}
+
+.lecture.live{
+    background:#effcf6;
+    border-left-color:#16a66a;
+}
+
+.lecture.next{
+    background:#eff6ff;
+    border-left-color:#2879ed;
+}
+
+.time{
+    min-width:125px;
+    font-weight:900;
+    color:#2364c8;
+}
+
+.subject{
+    flex:1;
+    font-weight:900;
+    color:#18375f;
+}
+
+.meta{
+    color:#6d7f98;
+    font-size:12px;
+    margin-top:4px;
+}
+
+.badge{
+    display:inline-block;
+    padding:6px 10px;
+    border-radius:30px;
+    color:#fff;
+    font-size:10px;
+    font-weight:900;
+    white-space:nowrap;
+}
+
+.btn{
+    border-radius:10px;
+}
+
+.btn-blue{background:#2879ed;color:#fff}
+.btn-green{background:#16a66a;color:#fff}
+.btn-red{background:#e52d4f;color:#fff}
+.btn-orange{background:#f28a19;color:#fff}
+.btn-purple{background:#7044dc;color:#fff}
+.btn-gray{background:#e5edf6;color:#19395f}
+
+@media (max-width:1200px){
+    .dashboard-cards{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+
+@media (max-width:900px) and (min-width:701px){
+    .navbar{width:235px}
+    .container{width:calc(100% - 235px);margin-left:235px;padding:24px}
+    .footer{margin-left:235px}
+    .dashboard-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .hero-logo{width:92px;height:92px;flex-basis:92px}
+}
+
+@media (max-width:700px){
+    .navbar{
+        position:relative;
+        width:100%;
+        height:auto;
+        min-height:auto;
+        padding:12px;
+        gap:10px;
     }
 
-    .brand { flex-direction: row; justify-content: flex-start; padding: 3px 5px 10px; }
-    .college-logo { width: 55px; height: 55px; }
-    .logo { text-align: left; font-size: 15px; }
-    .logo small { font-size: 8px; }
-
-    .nav-links {
-        flex-direction: row;
-        flex-wrap: wrap;
-        overflow-x: visible;
+    .brand{
+        flex-direction:row;
+        justify-content:flex-start;
+        padding:3px 5px 11px;
     }
 
-    .nav-links a { width: auto; font-size: 12px; padding: 9px 10px; }
-    .container { width: 96%; margin-left: auto; margin-right: auto; padding: 15px 0 35px; }
-    .footer { margin-left: 0; }
+    .college-logo{width:58px;height:58px}
+    .logo{text-align:left;font-size:16px}
+    .logo small{font-size:8px}
 
-    .hero.dashboard-hero { align-items: flex-start; padding: 18px; gap: 13px; }
-    .hero-logo { width: 72px; height: 72px; flex-basis: 72px; }
-    .hero.dashboard-hero h1 { font-size: 23px; }
-    .hero.dashboard-hero p { font-size: 13px; }
-    .hero.dashboard-hero .time { font-size: 12px; }
+    .nav-links{
+        flex-direction:row;
+        flex-wrap:wrap;
+    }
 
-    .dashboard-filters .filter-grid { grid-template-columns: 1fr; }
-    .dashboard-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .dashboard-stat { min-height: 86px; padding: 14px; }
-    .quick-actions { grid-template-columns: 1fr; }
+    .nav-links a{
+        width:auto;
+        min-height:42px;
+        font-size:12px;
+        padding:9px 10px;
+    }
+
+    .nav-icon{width:18px;height:18px;flex-basis:18px}
+    .nav-icon svg{width:18px;height:18px}
+
+    .container{
+        width:96%;
+        margin-left:auto;
+        margin-right:auto;
+        padding:15px 0 35px;
+    }
+
+    .footer{margin-left:0}
+
+    .hero.dashboard-hero{
+        align-items:flex-start;
+        padding:18px;
+        gap:13px;
+    }
+
+    .hero-logo{width:72px;height:72px;flex-basis:72px}
+    .hero.dashboard-hero h1{font-size:22px}
+    .hero.dashboard-hero p{font-size:12px}
+    .hero.dashboard-hero .time{font-size:11px}
+
+    .dashboard-filters .filter-grid{grid-template-columns:1fr}
+    .dashboard-cards{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .dashboard-stat{min-height:88px;padding:14px}
+
+    .quick-actions{grid-template-columns:1fr}
+
+    .lecture{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .time{min-width:auto}
 }
+
 </style>
 
 <script>
@@ -2233,7 +2423,6 @@ setInterval(reloadLiveLecture, 15000);
             alt="SGB College Logo"
             class="college-logo"
         >
-
         <div class="logo">
             SGB COLLEGE
             <small>COLLEGE MANAGEMENT SYSTEM</small>
@@ -2241,23 +2430,101 @@ setInterval(reloadLiveLecture, 15000);
     </a>
 
     <div class="nav-links">
-        <a href="{{ url_for('home') }}">🏠 Dashboard</a>
-        <a href="{{ url_for('master_timetable') }}">📚 All Classes</a>
-        <a href="{{ url_for('timetable_page') }}">📅 Daily Timetable</a>
+
+        <a href="{{ url_for('home') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>
+            </span>
+            <span>Dashboard</span>
+        </a>
+
+        <a href="{{ url_for('master_timetable') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M7 14h3M14 14h3M7 18h3M14 18h3"/></svg>
+            </span>
+            <span>All Classes / Master Timetable</span>
+        </a>
+
+        <a href="{{ url_for('timetable_page') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            </span>
+            <span>Daily Timetable</span>
+        </a>
 
         {% if current_user_obj and current_user_obj.is_admin %}
-            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
-            <a href="{{ url_for('reports') }}">📊 Reports</a>
-            <a href="{{ url_for('access_control') }}">👥 Users</a>
-            <a href="{{ url_for('college_location') }}">📍 College Location</a>
-            <a href="{{ url_for('timetable_manage') }}">⚙ Manage Timetable</a>
-            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+            <a href="{{ url_for('attendance') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3.5h6"/><path d="m8 12 2 2 5-5"/><path d="M8 17h8"/></svg>
+                </span>
+                <span>Attendance</span>
+            </a>
+
+            <a href="{{ url_for('reports') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                </span>
+                <span>Reports</span>
+            </a>
+
+            <a href="{{ url_for('access_control') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c.5-3.5 2.5-5 6-5s5.5 1.5 6 5"/><path d="M15 15c3 0 5 1.5 5.5 5"/></svg>
+                </span>
+                <span>Users</span>
+            </a>
+
+            <a href="{{ url_for('college_location') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                </span>
+                <span>College Location</span>
+            </a>
+
+            <a href="{{ url_for('timetable_manage') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="7"/></svg>
+                </span>
+                <span>Manage Timetable</span>
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M9 12h9"/></svg>
+                </span>
+                <span>Logout</span>
+            </a>
+
         {% elif current_user_obj and current_user_obj.assigned_subject %}
-            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
-            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+
+            <a href="{{ url_for('attendance') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m8 12 2 2 5-5"/><path d="M8 17h8"/></svg>
+                </span>
+                <span>Attendance</span>
+            </a>
+
+            <a href="{{ url_for('logout') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M9 12h9"/></svg>
+                </span>
+                <span>Logout</span>
+            </a>
+
         {% else %}
-            <a href="{{ url_for('login') }}">🔐 Login</a>
+
+            <a href="{{ url_for('login') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/><path d="M19 8h2M20 7v2"/></svg>
+                </span>
+                <span>Login</span>
+            </a>
+
         {% endif %}
+    </div>
+
+    <div class="nav-footer">
+        <strong>Knowledge Builds<br>A Better Tomorrow</strong>
     </div>
 
 </nav>
@@ -2277,9 +2544,7 @@ setInterval(reloadLiveLecture, 15000);
 </div>
 
 <div class="footer">
-    SGB College Management System
-    <br>
-    Timetable • Current Lecture • Attendance • Reports
+    SGB College Management System • Timetable • Current Lecture • Attendance
 </div>
 
 </body>
