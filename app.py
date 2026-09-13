@@ -2135,6 +2135,251 @@ td {
     .dashboard-stat { min-height: 86px; padding: 14px; }
     .quick-actions { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   FINAL SGB STANDARD WEBSITE THEME
+   ============================================================ */
+body {
+    background: #f3f7fc;
+    color: #172b4d;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+.navbar {
+    width: 270px;
+    background: linear-gradient(180deg, #061b3a 0%, #0a2b5e 55%, #103b7b 100%);
+    padding: 20px 14px;
+    border-right: 1px solid rgba(255,255,255,.08);
+}
+.brand { padding-bottom: 18px; gap: 9px; }
+.college-logo {
+    width: 82px; height: 82px; padding: 4px;
+    box-shadow: 0 8px 22px rgba(0,0,0,.22);
+}
+.logo { font-size: 19px; letter-spacing: .2px; }
+.logo small { font-size: 9px; letter-spacing: 1.1px; }
+.nav-links { gap: 7px; margin-top: 4px; }
+.nav-links a {
+    min-height: 46px;
+    padding: 12px 14px;
+    border-radius: 11px;
+    font-size: 14px;
+}
+.nav-links a:hover { background: rgba(59,130,246,.28); transform: translateX(3px); }
+.nav-links a:first-child {
+    background: linear-gradient(135deg,#2875f2,#367df0);
+    box-shadow: 0 8px 18px rgba(37,99,235,.28);
+}
+.container {
+    width: calc(100% - 270px);
+    margin-left: 270px;
+    padding: 22px 34px 55px;
+    background: #f3f7fc;
+}
+.footer { margin-left: 270px; background: #f3f7fc; }
+
+/* Top header like a modern college admin panel */
+.sgb-topbar {
+    position: fixed;
+    left: 270px; right: 0; top: 0;
+    height: 64px;
+    background: rgba(255,255,255,.96);
+    border-bottom: 1px solid #e6edf6;
+    box-shadow: 0 3px 14px rgba(15,23,42,.05);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+}
+.sgb-topbar-left { display:flex; align-items:center; gap:12px; }
+.sgb-menu {
+    width:38px;height:38px;border:0;border-radius:10px;
+    background:#f1f5fb;color:#234b86;font-size:21px;cursor:pointer;
+}
+.sgb-topbar-right { display:flex;align-items:center;gap:18px; }
+.sgb-bell { font-size:21px;color:#173b7a;position:relative; }
+.sgb-bell::after {
+    content:''; position:absolute; width:7px;height:7px;border-radius:50%;
+    background:#ef3340; right:-2px; top:-1px;
+}
+.sgb-user {
+    display:flex;align-items:center;gap:10px;
+    color:#173b7a;font-weight:800;
+    border-left:1px solid #e5eaf2;padding-left:18px;
+}
+.sgb-avatar {
+    width:40px;height:40px;border-radius:50%;
+    display:grid;place-items:center;background:#edf3fb;
+    border:1px solid #cbd8ec;font-size:22px;
+}
+
+/* Header/hero */
+.container { padding-top: 84px; }
+.hero.dashboard-hero {
+    min-height: 228px;
+    padding: 26px 34px;
+    border-radius: 18px;
+    background: linear-gradient(115deg,#096be9 0%,#2459e8 48%,#7b3ff0 100%);
+    box-shadow: 0 12px 30px rgba(37,99,235,.18);
+}
+.hero.dashboard-hero::before {
+    content:'';
+    position:absolute; width:330px;height:330px; right:-90px; bottom:-190px;
+    border-radius:50%; border:70px solid rgba(255,255,255,.07);
+}
+.hero.dashboard-hero::after {
+    width:260px;height:260px;right:-80px;top:-150px;
+    background:rgba(255,255,255,.09);
+}
+.hero-logo { width:118px;height:118px;flex-basis:118px; }
+.hero-copy { padding-left:2px; }
+.hero.dashboard-hero h1 {
+    font-size: clamp(28px,3vw,43px);
+    letter-spacing:.2px;
+    margin-bottom:7px;
+}
+.hero-org {
+    font-size:16px;font-weight:800;letter-spacing:.5px;
+    margin-bottom:2px;text-transform:uppercase;
+}
+.hero-subtitle { font-size:17px;font-weight:600;opacity:.98; }
+.hero-time {
+    margin-top:12px!important;
+    font-size:15px!important;font-weight:800;
+}
+
+/* Filters */
+.dashboard-filters {
+    padding:18px 22px;
+    border:1px solid #e3ebf7;
+    box-shadow:0 6px 20px rgba(15,23,42,.06);
+}
+.dashboard-filters label { color:#31527e;font-size:13px; }
+.dashboard-filters select {
+    border:1px solid #cbd8ea;border-radius:11px;
+    height:46px;background:#fff;color:#19365e;
+}
+
+/* KPI cards */
+.dashboard-cards { grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
+.dashboard-stat {
+    min-height:116px;
+    padding:18px 18px 16px 21px;
+    border:1px solid #e0e8f3;
+    border-radius:16px;
+    box-shadow:0 7px 20px rgba(15,23,42,.06);
+}
+.dashboard-stat::before { width:5px; }
+.dashboard-stat .stat-title { color:#637797;font-size:11px;letter-spacing:.7px; }
+.dashboard-stat .stat-value { font-size:29px; color:#173b7a; }
+
+/* Section cards */
+.dashboard-section {
+    border:1px solid #e3eaf5;
+    border-radius:17px;
+    box-shadow:0 7px 22px rgba(15,23,42,.055);
+}
+.dashboard-section .report-title h2 { color:#163864; }
+
+/* Master timetable: centered, clean, subject-filled colors */
+.master-table {
+    width:100%;
+    border:1px solid #d5e0ef;
+    border-radius:14px;
+    background:#fff;
+}
+.master-table th {
+    background:linear-gradient(180deg,#eaf2ff,#dfeaff);
+    color:#163d79;
+    border-bottom:1px solid #cbd9ec;
+    font-size:13px;
+    padding:15px 10px;
+}
+.master-table td {
+    text-align:center!important;
+    vertical-align:middle!important;
+    border-right:1px solid #edf2f8;
+    border-bottom:1px solid #e5ebf4;
+    padding:10px;
+}
+.master-table tr:last-child td { border-bottom:0; }
+.master-table .slot-cell {
+    background:#f5f8fd;
+    color:#2459a8;
+    font-size:13px;
+    font-weight:900;
+}
+.lecture-cell {
+    padding:11px 9px;
+    border-radius:11px;
+    border:1px solid rgba(148,163,184,.28);
+    border-top-width:4px;
+    box-shadow:0 3px 9px rgba(15,23,42,.06);
+}
+.lecture-cell .subject-name {
+    display:block;
+    margin:0 auto 7px;
+    padding:7px 8px;
+    border-radius:8px;
+    font-size:13px;
+    color:#172b4d;
+}
+.lecture-cell.subject-blue { background:#eef5ff;border-top-color:#2563eb; }
+.lecture-cell.subject-blue .subject-name { background:#dbeafe; }
+.lecture-cell.subject-purple { background:#f5efff;border-top-color:#7c3aed; }
+.lecture-cell.subject-purple .subject-name { background:#ede9fe; }
+.lecture-cell.subject-green { background:#edfcf3;border-top-color:#16a34a; }
+.lecture-cell.subject-green .subject-name { background:#dcfce7; }
+.lecture-cell.subject-orange { background:#fff5e9;border-top-color:#ea580c; }
+.lecture-cell.subject-orange .subject-name { background:#ffedd5; }
+.lecture-cell.subject-teal { background:#eafcf9;border-top-color:#0d9488; }
+.lecture-cell.subject-teal .subject-name { background:#ccfbf1; }
+.lecture-cell.subject-olive { background:#f4fbe9;border-top-color:#65a30d; }
+.lecture-cell.subject-olive .subject-name { background:#ecfccb; }
+.lecture-cell.subject-pink { background:#fff0f7;border-top-color:#db2777; }
+.lecture-cell.subject-pink .subject-name { background:#fce7f3; }
+.lecture-cell.subject-indigo { background:#eef2ff;border-top-color:#4f46e5; }
+.lecture-cell.subject-indigo .subject-name { background:#e0e7ff; }
+.lecture-cell.subject-slate { background:#f7f9fc;border-top-color:#64748b; }
+.lecture-cell.subject-slate .subject-name { background:#e9eef5; }
+.master-table .meta { text-align:center; color:#60718c; }
+
+/* Responsive */
+@media (max-width:1200px) {
+    .dashboard-cards { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+@media (max-width:900px) and (min-width:701px) {
+    .navbar { width:220px; }
+    .sgb-topbar { left:220px; }
+    .container { width:calc(100% - 220px); margin-left:220px; padding:82px 22px 45px; }
+    .footer { margin-left:220px; }
+    .dashboard-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:700px) {
+    .navbar {
+        position:relative;width:100%;height:auto;min-height:auto;
+        padding:12px;display:block;
+    }
+    .brand { flex-direction:row;justify-content:flex-start; }
+    .college-logo { width:58px;height:58px; }
+    .logo { text-align:left;font-size:15px; }
+    .nav-links { flex-direction:row;flex-wrap:wrap; }
+    .nav-links a { width:auto;min-height:auto;font-size:12px;padding:9px 10px; }
+    .sgb-topbar { position:relative;left:auto;height:54px;padding:0 12px; }
+    .sgb-user { font-size:12px;padding-left:10px; }
+    .sgb-avatar { width:34px;height:34px;font-size:18px; }
+    .container { width:96%;margin:0 auto;padding:15px 0 35px; }
+    .hero.dashboard-hero { min-height:180px;padding:20px;gap:13px; }
+    .hero-logo { width:76px;height:76px;flex-basis:76px; }
+    .hero-org { font-size:11px; }
+    .hero.dashboard-hero h1 { font-size:24px; }
+    .hero-subtitle { font-size:12px; }
+    .hero-time { font-size:11px!important; }
+    .dashboard-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .dashboard-stat { min-height:92px;padding:13px; }
+    .dashboard-stat .stat-value { font-size:23px; }
+}
+
 </style>
 
 <script>
@@ -2262,6 +2507,19 @@ setInterval(reloadLiveLecture, 15000);
 
 </nav>
 
+<header class="sgb-topbar">
+    <div class="sgb-topbar-left">
+        <button class="sgb-menu" type="button" aria-label="Menu">☰</button>
+    </div>
+    <div class="sgb-topbar-right">
+        <span class="sgb-bell" aria-label="Notifications">🔔</span>
+        <div class="sgb-user">
+            <span class="sgb-avatar">👤</span>
+            <span>{{ current_user_obj.name if current_user_obj else "Guest" }}</span>
+        </div>
+    </div>
+</header>
+
 <div class="container">
 
 {% with messages = get_flashed_messages() %}
@@ -2362,9 +2620,11 @@ def home():
     <img src="{{ url_for('static', filename='college-logo.png') }}"
          alt="College Logo" class="hero-logo">
     <div class="hero-copy">
-        <h1>SHRI GURU BUDDHISWAMI MAHAVIDYALAYA</h1>
-        <p>Timetable, live lecture and permanent attendance management</p>
-        <div class="time" id="live-clock">India Time: {{ now_time }}</div>
+        <div class="hero-org">SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S</div>
+        <h1>SGB COLLEGE</h1>
+        <p class="hero-subtitle">COLLEGE MANAGEMENT SYSTEM</p>
+        <p style="margin-top:6px;">Timetable, live lecture and permanent attendance management</p>
+        <div class="time hero-time" id="live-clock">🕐 India Time: {{ now_time }}</div>
     </div>
 </div>
 
@@ -2618,7 +2878,7 @@ def api_live():
 # ============================================================
 
 def short_subject_label(value):
-    """Make timetable category labels compact and consistent for display."""
+    """Compact timetable labels while preserving the actual subject text."""
     import re
     text = str(value or "").strip()
     text = re.sub(r"^Major\s*:", "Maj:", text, flags=re.IGNORECASE)
@@ -2629,19 +2889,28 @@ def short_subject_label(value):
 
 
 def subject_color_class(value):
-    """Return a stable color class so the same subject keeps the same color."""
+    """Stable subject color; also recognizes labels such as 'Practical: Physics'."""
+    import re
     key = normalize_subject(value) if 'normalize_subject' in globals() else str(value or '').strip().lower()
-    colors = {
-        "physics": "subject-blue",
-        "chemistry": "subject-purple",
-        "computer science": "subject-green",
-        "mathematics": "subject-orange",
-        "microbiology": "subject-teal",
-        "botany": "subject-olive",
-        "zoology": "subject-pink",
-        "english": "subject-indigo",
-    }
-    return colors.get(key, "subject-slate")
+    key = re.sub(r"^maj:\s*", "", key)
+    key = re.sub(r"^min:\s*", "", key)
+    if "physics" in key:
+        return "subject-blue"
+    if "chemistry" in key:
+        return "subject-purple"
+    if "computer science" in key or key == "comp sci" or "computer" in key:
+        return "subject-green"
+    if "mathematics" in key or key == "math":
+        return "subject-orange"
+    if "microbiology" in key or key == "micro" or "microbiology" in key:
+        return "subject-teal"
+    if "botany" in key:
+        return "subject-olive"
+    if "zoology" in key:
+        return "subject-pink"
+    if "english" in key:
+        return "subject-indigo"
+    return "subject-slate"
 
 
 # ============================================================
