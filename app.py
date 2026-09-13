@@ -3350,6 +3350,31 @@ body{
     .dashboard-cards{grid-template-columns:repeat(2,minmax(0,1fr))!important;}
 }
 
+
+/* FINAL COLLEGE PHOTO + PROFESSIONAL SIDEBAR ICONS */
+.nav-links a svg{
+    width:22px!important;height:22px!important;flex:0 0 22px!important;
+    fill:none!important;stroke:currentColor!important;stroke-width:1.9!important;
+    stroke-linecap:round!important;stroke-linejoin:round!important;
+}
+.hero-campus-photo{
+    position:absolute!important;right:0!important;top:0!important;bottom:0!important;
+    width:39%!important;min-width:350px!important;overflow:hidden!important;z-index:1!important;
+}
+.hero-campus-photo img{
+    width:100%!important;height:100%!important;display:block!important;
+    object-fit:cover!important;object-position:center 52%!important;
+    filter:saturate(.84) contrast(.97)!important;
+}
+.hero-campus-overlay{
+    position:absolute!important;inset:0!important;
+    background:linear-gradient(90deg,rgba(19,83,225,.99) 0%,rgba(42,79,229,.82) 20%,rgba(88,60,231,.38) 55%,rgba(120,57,235,.10) 100%)!important;
+}
+.hero-campus-photo::after{content:""!important;position:absolute!important;inset:0!important;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.10))!important;}
+.hero.dashboard-hero .hero-copy{max-width:62%!important;z-index:5!important;}
+@media(max-width:1000px){.hero-campus-photo{width:35%!important;min-width:240px!important}.hero.dashboard-hero .hero-copy{max-width:68%!important}}
+@media(max-width:700px){.hero-campus-photo{width:100%!important;min-width:0!important;opacity:.25!important}.hero.dashboard-hero .hero-copy{max-width:100%!important}.hero-campus-overlay{background:linear-gradient(90deg,rgba(15,91,226,.98),rgba(104,55,235,.88))!important}}
+
 </style>
 
 <script>
@@ -3456,22 +3481,22 @@ setInterval(reloadLiveLecture, 15000);
     </a>
 
     <div class="nav-links">
-        <a href="{{ url_for('home') }}">🏠 Dashboard</a>
-        <a href="{{ url_for('master_timetable') }}">📚 All Classes</a>
-        <a href="{{ url_for('timetable_page') }}">📅 Daily Timetable</a>
+        <a href="{{ url_for('home') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v9a1.5 1.5 0 0 1-1.5 1.5H4.5A1.5 1.5 0 0 1 3 19.5z"/><path d="M9 21v-6h6v6"/></svg> Dashboard</a>
+        <a href="{{ url_for('master_timetable') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 4.5v17M8 6h8M8 10h8"/></svg> All Classes</a>
+        <a href="{{ url_for('timetable_page') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 9h18M7 13h3M14 13h3M7 17h3"/></svg> Daily Timetable</a>
 
         {% if current_user_obj and current_user_obj.is_admin %}
-            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
-            <a href="{{ url_for('reports') }}">📊 Reports</a>
-            <a href="{{ url_for('access_control') }}">👥 Users</a>
-            <a href="{{ url_for('college_location') }}">📍 College Location</a>
-            <a href="{{ url_for('timetable_manage') }}">⚙ Manage Timetable</a>
-            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+            <a href="{{ url_for('attendance') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Attendance</a>
+            <a href="{{ url_for('reports') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Reports</a>
+            <a href="{{ url_for('access_control') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 15c2.8-.2 5.5 1.7 5.5 5"/></svg> Users</a>
+            <a href="{{ url_for('college_location') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-6.1 7-12a7 7 0 1 0-14 0c0 5.9 7 12 7 12z"/><circle cx="12" cy="9" r="2.3"/></svg> College Location</a>
+            <a href="{{ url_for('timetable_manage') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3 .5 2a7.5 7.5 0 0 1 4 0l.5-2 2.1.9-.8 1.9a8 8 0 0 1 2.8 2.8l1.9-.8.9 2.1-2 .5a7.5 7.5 0 0 1 0 4l2 .5-.9 2.1-1.9-.8a8 8 0 0 1-2.8 2.8l.8 1.9-2.1.9-.5-2a7.5 7.5 0 0 1-4 0l-.5 2-2.1-.9.8-1.9a8 8 0 0 1-2.8-2.8l-1.9.8-.9-2.1 2-.5a7.5 7.5 0 0 1 0-4l-2-.5.9-2.1 1.9.8A8 8 0 0 1 7.3 7.8L6.5 5.9z"/><circle cx="12" cy="12" r="3"/></svg> Manage Timetable</a>
+            <a href="{{ url_for('logout') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 8l4 4-4 4M8 12h10"/></svg> Logout</a>
         {% elif current_user_obj and current_user_obj.assigned_subject %}
-            <a href="{{ url_for('attendance') }}">📝 Attendance</a>
-            <a href="{{ url_for('logout') }}">🚪 Logout</a>
+            <a href="{{ url_for('attendance') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg> Attendance</a>
+            <a href="{{ url_for('logout') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h5M14 8l4 4-4 4M8 12h10"/></svg> Logout</a>
         {% else %}
-            <a href="{{ url_for('login') }}">🔐 Login</a>
+            <a href="{{ url_for('login') }}"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Login</a>
         {% endif %}
     </div>
 
@@ -3595,6 +3620,10 @@ def home():
         <p class="hero-subtitle">COLLEGE MANAGEMENT SYSTEM</p>
         <p style="margin-top:6px;">Timetable, live lecture and permanent attendance management</p>
         <div class="time hero-time" id="live-clock">◷ &nbsp; India Time: {{ now_time }}</div>
+    </div>
+    <div class="hero-campus-photo" aria-label="SGB College Campus">
+        <img src="{{ url_for('static', filename='college-building.jpg') }}" alt="SGB College Campus">
+        <div class="hero-campus-overlay"></div>
     </div>
 </div>
 
