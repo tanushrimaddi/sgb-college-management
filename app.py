@@ -1933,14 +1933,18 @@ body{
 }
 
 .nav-footer{
-    margin-top:auto;
+    
+    display:none !important;
     padding:17px 8px 3px;
     border-top:1px solid rgba(255,255,255,.14);
     text-align:center;
     color:#d5e2f5;
     font-size:11px;
     line-height:1.5;
-}
+} 
+.nav-footer{
+    display:none !important;
+} 
 
 .container{
     width:calc(100% - 290px);
@@ -2435,7 +2439,7 @@ setInterval(reloadLiveLecture, 15000);
             class="college-logo"
         >
         <div class="logo">
-            SGB COLLEGE
+            SGB COLLEGE,Purna
             <small>COLLEGE MANAGEMENT SYSTEM</small>
         </div>
     </a>
@@ -2534,10 +2538,7 @@ setInterval(reloadLiveLecture, 15000);
         {% endif %}
     </div>
 
-    <div class="nav-footer">
-        <strong>Knowledge Builds<br>A Better Tomorrow</strong>
-    </div>
-
+    
 </nav>
 
 <div class="container">
@@ -2639,7 +2640,7 @@ def home():
          alt="College Logo" class="hero-logo">
     <div class="hero-copy">
         <div class="hero-institution">SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S</div>
-        <h1>SGB COLLEGE</h1>
+        <h1>SGB COLLEGE,Purna</h1>
         <p>Timetable, live lecture and attendance management</p>
         <div class="time" id="live-clock">Date  {{ now_time }}</div>
     </div>
