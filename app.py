@@ -2380,6 +2380,520 @@ body {
     .dashboard-stat .stat-value { font-size:23px; }
 }
 
+
+/* ============================================================
+   FINAL SGB COLLEGE DESIGN — MATCHING THE PROVIDED DASHBOARD
+   ============================================================ */
+
+html, body {
+    min-height: 100%;
+}
+
+body {
+    background: #f4f7fb;
+    color: #172b4d;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+}
+
+/* Left fixed navigation */
+.navbar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 290px;
+    min-height: 100vh;
+    height: 100vh;
+    padding: 18px 14px 20px;
+    background: linear-gradient(180deg, #071b3d 0%, #0b2d62 58%, #123e82 100%);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    gap: 0;
+    overflow-y: auto;
+    box-shadow: 5px 0 22px rgba(10, 39, 83, .10);
+    border: 0;
+}
+
+.navbar .brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 4px 20px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,.16);
+    text-align: center;
+}
+
+.navbar .college-logo {
+    width: 92px;
+    height: 92px;
+    object-fit: contain;
+    background: #fff;
+    border-radius: 50%;
+    padding: 5px;
+    box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    margin-bottom: 12px;
+}
+
+.navbar .logo {
+    color: #fff;
+    font-size: 21px;
+    font-weight: 900;
+    letter-spacing: .2px;
+}
+
+.navbar .logo small {
+    margin-top: 5px;
+    color: #b8c9e5;
+    font-size: 9px;
+    letter-spacing: 1.1px;
+    font-weight: 800;
+}
+
+.nav-links {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 7px;
+    width: 100%;
+    align-items: stretch;
+}
+
+.nav-links a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 47px;
+    width: 100%;
+    padding: 11px 15px;
+    border-radius: 11px;
+    color: #f5f8ff;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: .05px;
+    transition: .18s ease;
+}
+
+.nav-links a:hover {
+    background: rgba(255,255,255,.10);
+    transform: translateX(2px);
+}
+
+.nav-links a:first-child {
+    background: linear-gradient(90deg, #287df0, #1677e9);
+    box-shadow: 0 7px 18px rgba(25,116,235,.24);
+}
+
+.nav-links a:first-child:hover {
+    background: linear-gradient(90deg, #287df0, #1677e9);
+    transform: none;
+}
+
+/* Top white bar */
+.sgb-topbar {
+    position: fixed;
+    top: 0;
+    left: 290px;
+    right: 0;
+    height: 72px;
+    z-index: 900;
+    background: rgba(255,255,255,.97);
+    border-bottom: 1px solid #e5ebf4;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 27px;
+    box-shadow: 0 2px 12px rgba(15,43,80,.04);
+}
+
+.sgb-menu {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 10px;
+    background: #f0f5fd;
+    color: #2e4f7e;
+    font-size: 23px;
+    line-height: 40px;
+}
+
+.sgb-menu:hover {
+    background: #e5edf9;
+}
+
+.sgb-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 17px;
+}
+
+.sgb-bell {
+    font-size: 24px;
+    padding-right: 17px;
+    border-right: 1px solid #dce4ef;
+    line-height: 30px;
+}
+
+.sgb-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #183764;
+    font-size: 16px;
+    font-weight: 900;
+}
+
+.sgb-avatar {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #c9d7ea;
+    border-radius: 50%;
+    background: #eef3fa;
+    font-size: 21px;
+}
+
+/* Main page area */
+.container {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    margin-left: 290px;
+    padding: 91px 22px 42px;
+}
+
+.footer {
+    margin-left: 290px;
+    background: transparent;
+    color: #8494aa;
+    border-top: 1px solid #e7edf5;
+}
+
+/* Main hero */
+.hero.dashboard-hero {
+    min-height: 225px;
+    margin-bottom: 17px;
+    padding: 25px 32px;
+    border-radius: 19px;
+    display: flex;
+    align-items: center;
+    gap: 29px;
+    position: relative;
+    overflow: hidden;
+    background:
+        linear-gradient(115deg, rgba(7,114,239,.98) 0%, rgba(36,75,232,.98) 53%, rgba(121,58,239,.97) 100%);
+    box-shadow: 0 10px 28px rgba(37,99,235,.17);
+}
+
+.hero.dashboard-hero::before {
+    content: "";
+    position: absolute;
+    width: 330px;
+    height: 330px;
+    right: -100px;
+    top: -175px;
+    border-radius: 50%;
+    border: 35px solid rgba(255,255,255,.07);
+}
+
+.hero.dashboard-hero::after {
+    content: "";
+    position: absolute;
+    width: 310px;
+    height: 310px;
+    right: -135px;
+    bottom: -215px;
+    border-radius: 50%;
+    border: 38px solid rgba(255,255,255,.07);
+}
+
+.hero-logo {
+    width: 126px;
+    height: 126px;
+    flex: 0 0 126px;
+    padding: 5px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(0,0,0,.13);
+}
+
+.hero-copy {
+    position: relative;
+    z-index: 3;
+}
+
+.hero.dashboard-hero .hero-org {
+    margin-bottom: 4px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: .35px;
+    text-transform: uppercase;
+}
+
+.hero.dashboard-hero h1 {
+    margin: 0 0 3px;
+    color: #fff;
+    font-size: clamp(35px, 3.5vw, 51px);
+    line-height: 1.03;
+    font-weight: 950;
+    letter-spacing: .4px;
+}
+
+.hero.dashboard-hero .hero-subtitle {
+    margin: 0 0 7px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: .25px;
+}
+
+.hero.dashboard-hero p {
+    color: #fff;
+    font-size: 16px;
+}
+
+.hero.dashboard-hero .hero-time {
+    margin-top: 11px;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+/* Filters */
+.dashboard-filters {
+    padding: 17px 24px;
+    margin-bottom: 18px;
+    border: 1px solid #dce7f5;
+    border-radius: 17px;
+    background: #fff;
+    box-shadow: 0 5px 18px rgba(15,23,42,.055);
+}
+
+.dashboard-filters .filter-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 23px;
+}
+
+.dashboard-filters label {
+    margin-bottom: 8px;
+    color: #294d7c;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.dashboard-filters select {
+    height: 48px;
+    padding: 0 15px;
+    border: 1px solid #cad8ec;
+    border-radius: 10px;
+    color: #203a61;
+    background: #fff;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* KPI cards */
+.dashboard-cards {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 19px;
+}
+
+.dashboard-stat {
+    min-height: 114px;
+    padding: 19px 17px;
+    border: 1px solid #e1e9f4;
+    border-radius: 16px;
+    box-shadow: 0 5px 17px rgba(15,23,42,.055);
+}
+
+.dashboard-stat::before {
+    width: 4px;
+}
+
+.dashboard-stat .stat-title {
+    color: #617692;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: .35px;
+}
+
+.dashboard-stat .stat-value {
+    margin-top: 12px;
+    color: #123b79;
+    font-size: 29px;
+    font-weight: 950;
+}
+
+.dashboard-stat.green-card .stat-value { color: #07884e; }
+.dashboard-stat.red-card .stat-value { color: #d92d43; }
+.dashboard-stat.orange-card .stat-value { color: #e87500; }
+.dashboard-stat.purple-card .stat-value { color: #5b35cc; }
+
+/* Dashboard content sections */
+.dashboard-section {
+    padding: 20px;
+    margin-bottom: 18px;
+    border: 1px solid #e2eaf4;
+    border-radius: 17px;
+    box-shadow: 0 5px 18px rgba(15,23,42,.055);
+}
+
+.dashboard-section .report-title h2 {
+    color: #173968;
+    font-size: 22px;
+    font-weight: 900;
+}
+
+.quick-action {
+    border: 1px solid #dfe8f3;
+    background: #f8fbff;
+}
+
+/* Alerts */
+.alert {
+    border-radius: 11px;
+    border: 1px solid #dce7f4;
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+    .navbar {
+        width: 240px;
+    }
+
+    .sgb-topbar {
+        left: 240px;
+    }
+
+    .container {
+        margin-left: 240px;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .footer {
+        margin-left: 240px;
+    }
+
+    .dashboard-cards {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .hero.dashboard-hero {
+        min-height: 190px;
+    }
+
+    .hero-logo {
+        width: 100px;
+        height: 100px;
+        flex-basis: 100px;
+    }
+}
+
+@media (max-width: 700px) {
+    .navbar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        min-height: auto;
+        padding: 10px;
+        overflow: visible;
+    }
+
+    .navbar .brand {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 10px;
+        padding: 3px 5px 12px;
+        text-align: left;
+    }
+
+    .navbar .college-logo {
+        width: 55px;
+        height: 55px;
+        margin-bottom: 0;
+    }
+
+    .navbar .logo {
+        font-size: 16px;
+    }
+
+    .nav-links {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 5px;
+    }
+
+    .nav-links a {
+        width: auto;
+        min-height: 40px;
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    .sgb-topbar {
+        position: sticky;
+        left: auto;
+        height: 60px;
+        padding: 0 13px;
+    }
+
+    .container {
+        width: 96%;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 15px 0 35px;
+    }
+
+    .footer {
+        margin-left: 0;
+    }
+
+    .hero.dashboard-hero {
+        min-height: auto;
+        padding: 20px;
+        gap: 15px;
+    }
+
+    .hero-logo {
+        width: 75px;
+        height: 75px;
+        flex-basis: 75px;
+    }
+
+    .hero.dashboard-hero .hero-org {
+        font-size: 10px;
+    }
+
+    .hero.dashboard-hero h1 {
+        font-size: 30px;
+    }
+
+    .hero.dashboard-hero .hero-subtitle {
+        font-size: 14px;
+    }
+
+    .hero.dashboard-hero p {
+        font-size: 12px;
+    }
+
+    .dashboard-filters .filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 </style>
 
 <script>
@@ -2624,7 +3138,7 @@ def home():
         <h1>SGB COLLEGE</h1>
         <p class="hero-subtitle">COLLEGE MANAGEMENT SYSTEM</p>
         <p style="margin-top:6px;">Timetable, live lecture and permanent attendance management</p>
-        <div class="time hero-time" id="live-clock">🕐 India Time: {{ now_time }}</div>
+        <div class="time hero-time" id="live-clock">◷ &nbsp; India Time: {{ now_time }}</div>
     </div>
 </div>
 
