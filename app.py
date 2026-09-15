@@ -65,6 +65,10 @@ YEAR_ORDER = ["1st Year", "2nd Year", "3rd Year"]
 
 ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "admin123")
+ADMIN_USERNAME = os.environ.get("ADMIN_USERNAME","AAA")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AAA")
+
+
 
 # Trial teacher accounts. Each non-admin account can mark attendance only
 # for its assigned subject. Change passwords after first login.
@@ -74,6 +78,7 @@ TRIAL_TEACHERS = [
     {"name": "J.S.Pulle", "username": "j.s.pulle", "password": "teacher123", "subject": "chemistry"},
     {"name": "A.S.Kausadikar", "username": "a.s.kausadikar", "password": "teacher123", "subject": "math"},
     {"name": "R.R.Rakh", "username": "r.r.rakh", "password": "teacher123", "subject": "micro"},
+    
 ]
 
 ADMIN_DISPLAY_NAME = "A.B.Kurhe"
