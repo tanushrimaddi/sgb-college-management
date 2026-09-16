@@ -4000,7 +4000,7 @@ def master_timetable():
     content = r"""
 <div class="hero">
     <h1>📚 ALL CLASS / MASTER TIMETABLE</h1>
-    <p>Rows = time slots • Columns = Monday to Saturday</p>
+    
 </div>
 
 <form class="filters" method="get">
