@@ -73,11 +73,11 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AAA")
 # Trial teacher accounts. Each non-admin account can mark attendance only
 # for its assigned subject. Change passwords after first login.
 TRIAL_TEACHERS = [
-    {"name": "G.D Kurundkar", "username": "g.d.kurundkar", "password": "teacher123", "subject": "comp sci"},
-    {"name": "R.S.Shaikh", "username": "r.s.shaikh", "password": "teacher123", "subject": "Physics"},
-    {"name": "J.S.Pulle", "username": "j.s.pulle", "password": "teacher123", "subject": "chemistry"},
-    {"name": "A.S.Kausadikar", "username": "a.s.kausadikar", "password": "teacher123", "subject": "math"},
-    {"name": "R.R.Rakh", "username": "r.r.rakh", "password": "teacher123", "subject": "micro"},
+    {"name": "G.D Kurundkar", "username": "gdk", "password": "1234", "subject": "comp sci"},
+    {"name": "R.S.Shaikh", "username": "rsk", "password": "1234", "subject": "Physics"},
+    {"name": "J.S.Pulle", "username": "jsp", "password": "1234", "subject": "chemistry"},
+    {"name": "A.S.Kausadikar", "username": "ask", "password": "1234", "subject": "math"},
+    {"name": "R.R.Rakh", "username": "rrr", "password": "1234", "subject": "micro"},
     
 ]
 
