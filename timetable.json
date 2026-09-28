@@ -8,7 +8,7 @@
         ],
         "10:00-11:00": [
           "Chemistry-B-14",
-          "Elective-B-18"
+          "Electronic-B-18"
         ],
         "11:00-12:00": [
           "Mathematics-B-22"
@@ -29,7 +29,7 @@
         ],
         "10:00-11:00": [
           "Chemistry-B-14",
-          "Elective-B-18"
+          "Electronic-B-18"
         ],
         "11:00-12:00": [
           "Mathematics-B-22"
@@ -116,7 +116,7 @@
       "Monday": {
         "09:00-10:00": [
           "Minor: Chemistry-B-14",
-          "Minor: Elective-B-18",
+          "Minor: Electronic-B-18",
           "Minor: Microbiology-B-2",
           "Minor: Physics-B-20",
           "Minor: Zoology-B-8",
@@ -146,7 +146,7 @@
       "Tuesday": {
         "09:00-10:00": [
           "Minor: Chemistry-B-14",
-          "Minor: Elective-B-18",
+          "Minor: Electronic-B-18",
           "Minor: Microbiology-B-2",
           "Minor: Physics-B-20",
           "Minor: Zoology-B-8",
@@ -172,7 +172,7 @@
       "Wednesday": {
         "09:00-10:00": [
           "Major: Chemistry-B-14",
-          "Major: Elective-B-18",
+          "Major: Electronic-B-18",
           "Major: Microbiology-B-7",
           "Major: Physics-B-20",
           "Major: Zoology-B-8",
@@ -198,7 +198,7 @@
       "Thursday": {
         "09:00-10:00": [
           "Major: Chemistry-B-14",
-          "Major: Elective-B-18",
+          "Major: Electronic-B-18",
           "Major: Microbiology-B-7",
           "Major: Physics-B-20",
           "Major: Zoology-B-8",
@@ -224,7 +224,7 @@
       "Friday": {
         "09:00-10:00": [
           "Major: Chemistry-B-14",
-          "Major: Elective-B-18",
+          "Major: Electronic-B-18",
           "Major: Microbiology-B-7",
           "Major: Physics-B-20",
           "Major: Zoology-B-2",
@@ -252,7 +252,7 @@
       "Saturday": {
         "09:00-10:00": [
           "Major: Chemistry-B-14",
-          "Major: Elective-B-18",
+          "Major: Electronic-B-18",
           "Major: Microbiology-B-7",
           "Major: Physics-B-20",
           "Major: Zoology-B-2",
@@ -283,7 +283,7 @@
           "Mathematics-B-17"
         ],
         "11:00-12:00": [
-          "Elective-B-18"
+          "Electronic-B-18"
         ],
         "11:00-15:00": [
           "Major Practical: Physics",
@@ -303,7 +303,7 @@
           "Mathematics-B-17"
         ],
         "11:00-12:00": [
-          "Elective-B-18"
+          "Electronic-B-18"
         ],
         "11:00-15:00": [
           "Major Practical: Physics",
@@ -316,7 +316,7 @@
       "Wednesday": {
         "10:00-11:00": [
           "Chemistry-B-14",
-          "Elective-B-18",
+          "Electronic-B-18",
           "Microbiology-B-7",
           "Physics-B-22",
           "Zoology-B-8",
@@ -336,7 +336,7 @@
       "Thursday": {
         "10:00-11:00": [
           "Chemistry-B-14",
-          "Elective-B-18",
+          "Electronic-B-18",
           "Microbiology-B-7",
           "Physics-B-22",
           "Zoology-B-8",
@@ -357,7 +357,7 @@
       "Friday": {
         "10:00-11:00": [
           "Chemistry-B-14",
-          "Elective-B-18",
+          "Electronic-B-18",
           "Microbiology-B-7",
           "Physics-B-22",
           "Zoology-B-8",
@@ -385,7 +385,7 @@
       "Saturday": {
         "10:00-11:00": [
           "Chemistry-B-14",
-          "Elective-B-18",
+          "Electronic-B-18",
           "Microbiology-B-7",
           "Physics-B-22",
           "Zoology-B-8",
