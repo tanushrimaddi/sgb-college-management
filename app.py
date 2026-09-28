@@ -6,7 +6,7 @@ import math
 import uuid
 from datetime import datetime, date, timedelta
 from zoneinfo import ZoneInfo
-from functools import wrapsn
+from functools import wraps
 
 from flask import (
     Flask, render_template_string, request, redirect, url_for,
