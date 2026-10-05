@@ -2487,6 +2487,13 @@ setInterval(reloadLiveLecture, 15000);
                 <span>Reports</span>
             </a>
 
+            <a href="{{ url_for('attendance_import') }}">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                </span>
+                <span>Import Attendance</span>
+            </a>
+
             <a href="{{ url_for('access_control') }}">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c.5-3.5 2.5-5 6-5s5.5 1.5 6 5"/><path d="M15 15c3 0 5 1.5 5.5 5"/></svg>
@@ -3753,9 +3760,16 @@ def attendance():
             {{ day }} • {{ record_date_text }}
         </h2>
 
-        <a class="btn btn-blue" href="{{ url_for('reports', faculty=faculty, year=year) }}">
-            View Reports
-        </a>
+        <div class="action-row">
+            <a class="btn btn-blue" href="{{ url_for('reports', faculty=faculty, year=year) }}">
+                View Reports
+            </a>
+            {% if current_user_obj and current_user_obj.is_admin %}
+                <a class="btn btn-purple" href="{{ url_for('attendance_import') }}">
+                    📥 Import CSV
+                </a>
+            {% endif %}
+        </div>
     </div>
 
     {% if rows %}
@@ -4268,6 +4282,13 @@ def reports():
 
         <div>
             <label>&nbsp;</label>
+            <a class="btn btn-purple" href="{{ url_for('attendance_import') }}">
+                📥 Import CSV
+            </a>
+        </div>
+
+        <div>
+            <label>&nbsp;</label>
             <button
                 class="btn btn-purple"
                 type="button"
@@ -4581,6 +4602,274 @@ def export_csv():
         headers={
             "Content-Disposition":
                 f'attachment; filename="{filename}"'
+        }
+    )
+
+
+# ============================================================
+# CSV IMPORT - HISTORICAL ATTENDANCE
+# ============================================================
+
+@app.route("/reports/import", methods=["GET", "POST"])
+@admin_required
+def attendance_import():
+    if request.method == "POST":
+        uploaded = request.files.get("file")
+
+        if not uploaded or not uploaded.filename:
+            flash("Please select a CSV file.")
+            return redirect(url_for("attendance_import"))
+
+        if not uploaded.filename.lower().endswith(".csv"):
+            flash("Only CSV files are supported.")
+            return redirect(url_for("attendance_import"))
+
+        try:
+            text_data = uploaded.read().decode("utf-8-sig")
+        except UnicodeDecodeError:
+            flash("Could not read the CSV. Save it as UTF-8 CSV.")
+            return redirect(url_for("attendance_import"))
+
+        reader = csv.DictReader(io.StringIO(text_data))
+        if not reader.fieldnames:
+            flash("CSV file has no header row.")
+            return redirect(url_for("attendance_import"))
+
+        field_map = {
+            str(name or "").strip().lower(): name
+            for name in reader.fieldnames
+        }
+
+        def value(row, *names):
+            for name in names:
+                actual = field_map.get(name.lower())
+                if actual is not None:
+                    raw = row.get(actual)
+                    if raw is not None:
+                        return str(raw).strip()
+            return ""
+
+        required_columns = [
+            "date", "day", "time / lecture", "faculty",
+            "year", "subject", "status"
+        ]
+        missing = [c for c in required_columns if c not in field_map]
+        if missing:
+            flash("Missing CSV columns: " + ", ".join(missing))
+            return redirect(url_for("attendance_import"))
+
+        status_aliases = {
+            "taken": "taken",
+            "take": "taken",
+            "yes": "taken",
+            "not taken": "not_taken",
+            "not_taken": "not_taken",
+            "not-taken": "not_taken",
+            "no": "not_taken",
+            "cancelled": "cancelled",
+            "canceled": "cancelled",
+            "cancel": "cancelled"
+        }
+
+        added = 0
+        updated = 0
+        skipped = 0
+        errors = []
+        importer = current_user()
+
+        for row_number, row in enumerate(reader, start=2):
+            try:
+                date_text = value(row, "date")
+                record_date = None
+                for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d"):
+                    try:
+                        record_date = datetime.strptime(date_text, fmt).date()
+                        break
+                    except ValueError:
+                        pass
+
+                day = value(row, "day").strip().title()
+                slot = value(row, "time / lecture", "time", "lecture")
+                faculty = value(row, "faculty")
+                year = normalize_year(value(row, "year"))
+                class_name = value(row, "class")
+                subject = value(row, "subject")
+                teacher = value(row, "teacher")
+                status = status_aliases.get(value(row, "status").lower())
+
+                if not record_date:
+                    raise ValueError("invalid Date")
+                if day not in DAYS:
+                    raise ValueError("invalid Day")
+                if not all([slot, faculty, year, subject, status]):
+                    raise ValueError("missing required value")
+
+                start, end = parse_slot(slot)
+                if start is None or end is None:
+                    raise ValueError("invalid Time / Lecture; use HH:MM-HH:MM")
+
+                present_text = value(
+                    row,
+                    "present students",
+                    "present count",
+                    "present_count"
+                )
+                if status == "taken":
+                    present_count = int(present_text or 0)
+                    if present_count < 0:
+                        raise ValueError("Present Students cannot be negative")
+                else:
+                    present_count = 0
+
+                marked_by = value(row, "marked by") or importer.name
+                marked_at_text = value(row, "marked at")
+                marked_at = now_ist_naive()
+                if marked_at_text:
+                    for fmt in (
+                        "%Y-%m-%d %H:%M:%S",
+                        "%d-%m-%Y %H:%M:%S",
+                        "%Y-%m-%d %I:%M:%S %p"
+                    ):
+                        try:
+                            marked_at = datetime.strptime(marked_at_text, fmt)
+                            break
+                        except ValueError:
+                            pass
+
+                record = attendance_record_for(
+                    record_date,
+                    faculty,
+                    year,
+                    day,
+                    slot,
+                    subject,
+                    class_name
+                )
+
+                if record:
+                    record.teacher = teacher
+                    record.status = status
+                    record.present_count = present_count
+                    record.marked_by_user_id = importer.id
+                    record.marked_by = marked_by
+                    record.marked_at = marked_at
+                    updated += 1
+                else:
+                    db.session.add(
+                        Attendance(
+                            record_date=record_date,
+                            faculty=faculty,
+                            year=year,
+                            class_name=class_name,
+                            day=day,
+                            slot=slot,
+                            subject=subject,
+                            teacher=teacher,
+                            status=status,
+                            marked_by_user_id=importer.id,
+                            marked_by=marked_by,
+                            present_count=present_count,
+                            marked_at=marked_at
+                        )
+                    )
+                    added += 1
+
+            except Exception as exc:
+                skipped += 1
+                if len(errors) < 8:
+                    errors.append(f"Row {row_number}: {exc}")
+
+        try:
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            flash(f"Import failed; no rows were saved: {exc}")
+            return redirect(url_for("attendance_import"))
+
+        message = f"CSV import complete: {added} added, {updated} updated, {skipped} skipped."
+        if errors:
+            message += " " + " | ".join(errors)
+        flash(message)
+        return redirect(url_for("reports", period="custom"))
+
+    content = r"""
+<div class="hero">
+    <h1>📥 Import Attendance CSV</h1>
+    <p>Bulk upload historical lecture attendance into PostgreSQL</p>
+</div>
+
+<div class="section">
+    <div class="alert">
+        This import is meant for <b>past attendance</b>. It does not bypass or change your normal live attendance rules.
+        The regular attendance page still controls live marking.
+    </div>
+
+    <h2>Upload CSV</h2>
+    <form method="post" enctype="multipart/form-data">
+        <div class="filter-grid">
+            <div>
+                <label>Attendance CSV</label>
+                <input type="file" name="file" accept=".csv,text/csv" required>
+            </div>
+            <div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap;">
+                <button class="btn btn-purple" type="submit">📥 Import CSV</button>
+                <a class="btn btn-blue" href="{{ url_for('attendance_import_template') }}">⬇ Download Template</a>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div class="section">
+    <h2>CSV columns</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr><th>Column</th><th>Example</th><th>Required</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Date</td><td>2026-09-01</td><td>Yes</td></tr>
+                <tr><td>Day</td><td>Tuesday</td><td>Yes</td></tr>
+                <tr><td>Time / Lecture</td><td>09:00-10:00</td><td>Yes</td></tr>
+                <tr><td>Faculty</td><td>Science</td><td>Yes</td></tr>
+                <tr><td>Year</td><td>2nd Year</td><td>Yes</td></tr>
+                <tr><td>Class</td><td>FY BSc</td><td>No</td></tr>
+                <tr><td>Subject</td><td>Physics</td><td>Yes</td></tr>
+                <tr><td>Teacher</td><td>R.S.Shaikh</td><td>No</td></tr>
+                <tr><td>Status</td><td>Taken / Not Taken / Cancelled</td><td>Yes</td></tr>
+                <tr><td>Present Students</td><td>42</td><td>No</td></tr>
+                <tr><td>Marked By</td><td>A.B.Kurhe</td><td>No</td></tr>
+                <tr><td>Marked At</td><td>2026-09-01 09:30:00</td><td>No</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+"""
+    return render_page(content, page_title="Import Attendance CSV")
+
+
+@app.route("/reports/import-template.csv")
+@admin_required
+def attendance_import_template():
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Date", "Day", "Time / Lecture", "Faculty", "Year", "Class",
+        "Subject", "Teacher", "Status", "Present Students", "Marked By", "Marked At"
+    ])
+    writer.writerow([
+        "2026-09-01", "Tuesday", "09:00-10:00", "Science", "2nd Year", "FY BSc",
+        "Physics", "R.S.Shaikh", "Taken", "42", "A.B.Kurhe", "2026-09-01 09:30:00"
+    ])
+    writer.writerow([
+        "2026-09-01", "Tuesday", "10:00-11:00", "Science", "2nd Year", "FY BSc",
+        "Chemistry", "J.S.Pulle", "Not Taken", "0", "A.B.Kurhe", "2026-09-01 10:15:00"
+    ])
+
+    return Response(
+        output.getvalue(),
+        mimetype="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="SGB_Attendance_Import_Template.csv"'
         }
     )
 
