@@ -2350,7 +2350,7 @@ function reloadLiveLecture() {
     .then(r => r.json())
     .then(data => {
         const time = document.getElementById("live-clock");
-        if (time) time.textContent = "India Time: " + data.time;
+        if (time) time.textContent = "Date time: " + data.time;
 
         const current = document.getElementById("current-live-list");
         const next = document.getElementById("next-live-list");
@@ -2629,9 +2629,9 @@ def home():
          alt="College Logo" class="hero-logo">
     <div class="hero-copy">
         <div class="hero-institution">SHRI GURU BUDDHISWAMI SHIKSHAN PRASARAK SANSTHA'S</div>
-        <h1>SGB COLLEGE</h1>
-        <p>Timetable, live lecture and permanent attendance management</p>
-        <div class="time" id="live-clock">India Time: {{ now_time }}</div>
+        <h1>SGB COLLEGE,PURNA</h1>
+        <p>Timetable, live lecture and attendance management</p>
+        <div class="time" id="live-clock">Date time: {{ now_time }}</div>
     </div>
 </div>
 
@@ -2973,7 +2973,6 @@ def master_timetable():
     content = r"""
 <div class="hero">
     <h1>📚 ALL CLASS / MASTER TIMETABLE</h1>
-    <p>Rows = time slots • Columns = Monday to Saturday</p>
 </div>
 
 <form class="filters" method="get">
@@ -5154,7 +5153,7 @@ if __name__ == "__main__":
     print("=" * 65)
     print("Timezone:", "Asia/Kolkata")
     print(
-        "Current India Time:",
+        "Current Date time:",
         now_ist().strftime("%d-%m-%Y %I:%M:%S %p")
     )
     print("Local URL:", f"http://127.0.0.1:{port}")
