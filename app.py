@@ -1933,13 +1933,7 @@ body{
 }
 
 .nav-footer{
-    margin-top:auto;
-    padding:17px 8px 3px;
-    border-top:1px solid rgba(255,255,255,.14);
-    text-align:center;
-    color:#d5e2f5;
-    font-size:11px;
-    line-height:1.5;
+    display:none !important;
 }
 
 .container{
@@ -2532,10 +2526,6 @@ setInterval(reloadLiveLecture, 15000);
             </a>
 
         {% endif %}
-    </div>
-
-    <div class="nav-footer">
-        <strong>Knowledge Builds<br>A Better Tomorrow</strong>
     </div>
 
 </nav>
