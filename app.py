@@ -1560,7 +1560,7 @@ function reloadLiveLecture() {
     .then(r => r.json())
     .then(data => {
         const time = document.getElementById("live-clock");
-        if (time) time.textContent = "India Time: " + data.time;
+        if (time) time.textContent = "Date time: " + data.time;
 
         const current = document.getElementById("current-live-list");
         const next = document.getElementById("next-live-list");
@@ -1747,7 +1747,7 @@ def home():
     <h1>🎓 SGB College Dashboard</h1>
     <p>Timetable, live lecture and permanent attendance management</p>
     <div class="time" id="live-clock">
-        India Time: {{ now_time }}
+        Date time: {{ now_time }}
     </div>
 </div>
 
@@ -3697,7 +3697,7 @@ if __name__ == "__main__":
     print("=" * 65)
     print("Timezone:", "Asia/Kolkata")
     print(
-        "Current India Time:",
+        "Current Date time:",
         now_ist().strftime("%d-%m-%Y %I:%M:%S %p")
     )
     print("Local URL:", f"http://127.0.0.1:{port}")
