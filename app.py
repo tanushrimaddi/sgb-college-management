@@ -9,42 +9,45 @@ from zoneinfo import ZoneInfo
 from functools import wraps
 
 from flask import (
-    Flask, render_template_string, request, redirect, url_for,
-    session, flash, Response, jsonify
+Flask, render_template_string, request, redirect, url_for,
+session, flash, Response, jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy import UniqueConstraint, inspect, text
 
+============================================================
 
-# ============================================================
-# APPLICATION CONFIGURATION
-# ============================================================
+APPLICATION CONFIGURATION
 
-app = Flask(__name__)
+============================================================
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+app = Flask(name)
+
+BASE_DIR = os.path.dirname(os.path.abspath(file))
 
 app.secret_key = os.environ.get(
-    "SECRET_KEY",
-    "CHANGE-ME-IN-PRODUCTION"
+"SECRET_KEY",
+"CHANGE-ME-IN-PRODUCTION"
 )
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "sqlite:///" + os.path.join(BASE_DIR, "college.db")
+"DATABASE_URL",
+"sqlite:///" + os.path.join(BASE_DIR, "college.db")
 )
 
-# Render/Railway may provide postgres://
+Render/Railway may provide postgres://
+
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-# Helpful for SQLite concurrency.
+Helpful for SQLite concurrency.
+
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True
+"pool_pre_ping": True
 }
 
 db = SQLAlchemy(app)
@@ -52,12 +55,12 @@ db = SQLAlchemy(app)
 IST = ZoneInfo("Asia/Kolkata")
 
 DAYS = [
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday"
+"Monday",
+"Tuesday",
+"Wednesday",
+"Thursday",
+"Friday",
+"Saturday"
 ]
 
 FACULTY_ORDER = ["Science", "Arts", "Commerce"]
@@ -70,1188 +73,1165 @@ ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "AAA")
 
 
 
-# Trial teacher accounts. Each non-admin account can mark attendance only
-# for its assigned subject. Change passwords after first login.
+Trial teacher accounts. Each non-admin account can mark attendance only
+
+for its assigned subject. Change passwords after first login.
+
 TRIAL_TEACHERS = [
-    {"name": "GDK", "username": "gdk", "password": "1234", "subject": "comp sci"},
-    {"name": "RSK", "username": "rsk", "password": "1234", "subject": "Physics"},
-    {"name": "JSP", "username": "jsp", "password": "1234", "subject": "chemistry"},
-    {"name": "ASK", "username": "ask", "password": "1234", "subject": "math"},
-    {"name": "RRR", "username": "rrr", "password": "1234", "subject": "micro"},
-    
+{"name": "GDK", "username": "gdk", "password": "1234", "subject": "comp sci"},
+{"name": "RSK", "username": "rsk", "password": "1234", "subject": "Physics"},
+{"name": "JSP", "username": "jsp", "password": "1234", "subject": "chemistry"},
+{"name": "ASK", "username": "ask", "password": "1234", "subject": "math"},
+{"name": "RRR", "username": "rrr", "password": "1234", "subject": "micro"},
+
 ]
 
 ADMIN_DISPLAY_NAME = "A.B.Kurhe"
 
 TIMETABLE_FILE = os.path.join(BASE_DIR, "timetable.json")
 
+============================================================
 
-# ============================================================
-# TIME HELPERS
-# ============================================================
+TIME HELPERS
+
+============================================================
 
 def now_ist():
-    return datetime.now(IST)
-
+return datetime.now(IST)
 
 def today_ist():
-    return now_ist().date()
-
+return now_ist().date()
 
 def now_ist_naive():
-    return now_ist().replace(tzinfo=None)
-
+return now_ist().replace(tzinfo=None)
 
 def parse_time(value):
-    """Return minutes after midnight from HH:MM."""
-    if value is None:
-        return None
+"""Return minutes after midnight from HH."""
+if value is None:
+return None
 
-    try:
-        text = str(value).strip()
-        parts = text.split(":")
-        hour = int(parts[0])
-        minute = int(parts[1])
-        if not (0 <= hour <= 23 and 0 <= minute <= 59):
-            return None
-        return hour * 60 + minute
-    except Exception:
+try:
+    text = str(value).strip()
+    parts = text.split(":")
+    hour = int(parts[0])
+    minute = int(parts[1])
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
         return None
-
+    return hour * 60 + minute
+except Exception:
+    return None
 
 def parse_slot(slot):
-    """Parse '09:00-10:00' into (start_minutes, end_minutes)."""
-    if not slot:
-        return None, None
+"""Parse '09:00-10:00' into (start_minutes, end_minutes)."""
+if not slot:
+return None, None
 
-    try:
-        start_text, end_text = str(slot).split("-", 1)
-        return parse_time(start_text), parse_time(end_text)
-    except Exception:
-        return None, None
-
+try:
+    start_text, end_text = str(slot).split("-", 1)
+    return parse_time(start_text), parse_time(end_text)
+except Exception:
+    return None, None
 
 def slot_start(slot):
-    start, _ = parse_slot(slot)
-    return start if start is not None else 99999
-
+start, _ = parse_slot(slot)
+return start if start is not None else 99999
 
 def format_date(value):
-    if not value:
-        return ""
-    return value.strftime("%d-%m-%Y")
-
+if not value:
+return ""
+return value.strftime("%d-%m-%Y")
 
 def format_time_range(slot):
-    return slot
+return slot
 
+============================================================
 
-# ============================================================
-# TIMETABLE DATA NORMALISATION
-# ============================================================
+TIMETABLE DATA NORMALISATION
+
+============================================================
 
 def load_timetable_json():
-    if not os.path.exists(TIMETABLE_FILE):
-        return {}
+if not os.path.exists(TIMETABLE_FILE):
+return {}
 
-    try:
-        with open(TIMETABLE_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as exc:
-        print("WARNING: timetable.json could not be loaded:", exc)
-        return {}
-
+try:
+    with open(TIMETABLE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+except Exception as exc:
+    print("WARNING: timetable.json could not be loaded:", exc)
+    return {}
 
 def lecture_to_dict(value):
-    """
-    Supports the existing timetable formats:
+"""
+Supports the existing timetable formats:
 
-        "Physics"
+    "Physics"
 
-        {"subject": "Physics", "teacher": "Dr. A"}
+    {"subject": "Physics", "teacher": "Dr. A"}
 
-        {"class": "Physics"}
+    {"class": "Physics"}
 
-        {"lecture": "Physics"}
+    {"lecture": "Physics"}
 
-        {"name": "Physics"}
+    {"name": "Physics"}
 
-        {"subject": "Physics", "teacher": "Dr. A", "room": "101"}
+    {"subject": "Physics", "teacher": "Dr. A", "room": "101"}
 
-        {"lectures": ["Physics", "Chemistry"]}
-    """
-    if isinstance(value, str):
-        return [{
-            "subject": value.strip(),
-            "teacher": "",
-            "room": "",
-            "class_name": ""
-        }] if value.strip() else []
-
-    if isinstance(value, dict):
-        # A dictionary containing a lecture list.
-        for list_key in ("lectures", "subjects", "classes"):
-            if isinstance(value.get(list_key), list):
-                result = []
-                parent_teacher = str(
-                    value.get("teacher", value.get("faculty_teacher", ""))
-                ).strip()
-                parent_room = str(value.get("room", "")).strip()
-                parent_class = str(
-                    value.get("class_name", value.get("class", ""))
-                ).strip()
-
-                for item in value[list_key]:
-                    parsed = lecture_to_dict(item)
-                    for x in parsed:
-                        if not x["teacher"]:
-                            x["teacher"] = parent_teacher
-                        if not x["room"]:
-                            x["room"] = parent_room
-                        if not x["class_name"]:
-                            x["class_name"] = parent_class
-                        result.append(x)
-                return result
-
-        subject = ""
-        for key in ("subject", "lecture", "name", "class"):
-            if value.get(key) is not None:
-                subject = str(value.get(key)).strip()
-                if subject:
-                    break
-
-        # If "class" was actually intended as a class name but there is
-        # no subject, it is still shown as the lecture subject.
-        if not subject:
-            subject = str(value).strip()
-
-        teacher = str(
-            value.get(
-                "teacher",
-                value.get(
-                    "faculty_teacher",
-                    value.get("instructor", "")
-                )
-            )
-        ).strip()
-
-        room = str(value.get("room", value.get("classroom", ""))).strip()
-
-        class_name = str(
-            value.get(
-                "class_name",
-                value.get("section", "")
-            )
-        ).strip()
-
-        return [{
-            "subject": subject,
-            "teacher": teacher,
-            "room": room,
-            "class_name": class_name
-        }] if subject else []
-
-    if isinstance(value, (list, tuple)):
-        result = []
-        for item in value:
-            result.extend(lecture_to_dict(item))
-        return result
-
-    text = str(value).strip()
+    {"lectures": ["Physics", "Chemistry"]}
+"""
+if isinstance(value, str):
     return [{
-        "subject": text,
+        "subject": value.strip(),
         "teacher": "",
         "room": "",
         "class_name": ""
-    }] if text else []
+    }] if value.strip() else []
 
+if isinstance(value, dict):
+    # A dictionary containing a lecture list.
+    for list_key in ("lectures", "subjects", "classes"):
+        if isinstance(value.get(list_key), list):
+            result = []
+            parent_teacher = str(
+                value.get("teacher", value.get("faculty_teacher", ""))
+            ).strip()
+            parent_room = str(value.get("room", "")).strip()
+            parent_class = str(
+                value.get("class_name", value.get("class", ""))
+            ).strip()
+
+            for item in value[list_key]:
+                parsed = lecture_to_dict(item)
+                for x in parsed:
+                    if not x["teacher"]:
+                        x["teacher"] = parent_teacher
+                    if not x["room"]:
+                        x["room"] = parent_room
+                    if not x["class_name"]:
+                        x["class_name"] = parent_class
+                    result.append(x)
+            return result
+
+    subject = ""
+    for key in ("subject", "lecture", "name", "class"):
+        if value.get(key) is not None:
+            subject = str(value.get(key)).strip()
+            if subject:
+                break
+
+    # If "class" was actually intended as a class name but there is
+    # no subject, it is still shown as the lecture subject.
+    if not subject:
+        subject = str(value).strip()
+
+    teacher = str(
+        value.get(
+            "teacher",
+            value.get(
+                "faculty_teacher",
+                value.get("instructor", "")
+            )
+        )
+    ).strip()
+
+    room = str(value.get("room", value.get("classroom", ""))).strip()
+
+    class_name = str(
+        value.get(
+            "class_name",
+            value.get("section", "")
+        )
+    ).strip()
+
+    return [{
+        "subject": subject,
+        "teacher": teacher,
+        "room": room,
+        "class_name": class_name
+    }] if subject else []
+
+if isinstance(value, (list, tuple)):
+    result = []
+    for item in value:
+        result.extend(lecture_to_dict(item))
+    return result
+
+text = str(value).strip()
+return [{
+    "subject": text,
+    "teacher": "",
+    "room": "",
+    "class_name": ""
+}] if text else []
 
 def ordered_faculties(values):
-    values = list(dict.fromkeys(values))
-    return (
-        [x for x in FACULTY_ORDER if x in values]
-        + [x for x in values if x not in FACULTY_ORDER]
-    )
-
+values = list(dict.fromkeys(values))
+return (
+[x for x in FACULTY_ORDER if x in values]
++ [x for x in values if x not in FACULTY_ORDER]
+)
 
 def ordered_years(values):
-    values = list(dict.fromkeys(values))
-    return (
-        [x for x in YEAR_ORDER if x in values]
-        + [x for x in values if x not in YEAR_ORDER]
-    )
-
+values = list(dict.fromkeys(values))
+return (
+[x for x in YEAR_ORDER if x in values]
++ [x for x in values if x not in YEAR_ORDER]
+)
 
 def normalize_year(value):
-    if value is None:
-        return ""
+if value is None:
+return ""
 
-    text = str(value).strip()
+text = str(value).strip()
 
-    aliases = {
-        "1": "1st Year",
-        "1st": "1st Year",
-        "1st year": "1st Year",
-        "first": "1st Year",
-        "first year": "1st Year",
+aliases = {
+    "1": "1st Year",
+    "1st": "1st Year",
+    "1st year": "1st Year",
+    "first": "1st Year",
+    "first year": "1st Year",
 
-        "2": "2nd Year",
-        "2nd": "2nd Year",
-        "2nd year": "2nd Year",
-        "second": "2nd Year",
-        "second year": "2nd Year",
+    "2": "2nd Year",
+    "2nd": "2nd Year",
+    "2nd year": "2nd Year",
+    "second": "2nd Year",
+    "second year": "2nd Year",
 
-        "3": "3rd Year",
-        "3rd": "3rd Year",
-        "3rd year": "3rd Year",
-        "third": "3rd Year",
-        "third year": "3rd Year",
-    }
+    "3": "3rd Year",
+    "3rd": "3rd Year",
+    "3rd year": "3rd Year",
+    "third": "3rd Year",
+    "third year": "3rd Year",
+}
 
-    return aliases.get(text.lower(), text)
-
+return aliases.get(text.lower(), text)
 
 def json_to_rows(data):
-    """
-    Flatten the existing nested timetable into database rows.
+"""
+Flatten the existing nested timetable into database rows.
 
-    Expected common structure:
+Expected common structure:
 
-    {
-      "Science": {
-        "1st Year": {
-          "Monday": {
-            "09:00-10:00": "Physics"
-          }
-        }
+{
+  "Science": {
+    "1st Year": {
+      "Monday": {
+        "09:00-10:00": "Physics"
       }
     }
+  }
+}
 
-    Existing dictionaries/lists are also accepted.
-    """
-    rows = []
+Existing dictionaries/lists are also accepted.
+"""
+rows = []
 
-    if not isinstance(data, dict):
-        return rows
-
-    for faculty, faculty_data in data.items():
-        if not isinstance(faculty_data, dict):
-            continue
-
-        for year, year_data in faculty_data.items():
-            if not isinstance(year_data, dict):
-                continue
-
-            year_normalized = normalize_year(year)
-
-            for day, day_data in year_data.items():
-                if day not in DAYS or not isinstance(day_data, dict):
-                    continue
-
-                for slot, value in day_data.items():
-                    for lecture in lecture_to_dict(value):
-                        rows.append({
-                            "faculty": str(faculty).strip(),
-                            "year": year_normalized,
-                            "day": day,
-                            "slot": str(slot).strip(),
-                            "subject": lecture["subject"],
-                            "teacher": lecture["teacher"],
-                            "class_name": lecture["class_name"],
-                            "room": lecture["room"]
-                        })
-
+if not isinstance(data, dict):
     return rows
 
+for faculty, faculty_data in data.items():
+    if not isinstance(faculty_data, dict):
+        continue
 
-# ============================================================
-# DATABASE MODELS
-# ============================================================
+    for year, year_data in faculty_data.items():
+        if not isinstance(year_data, dict):
+            continue
+
+        year_normalized = normalize_year(year)
+
+        for day, day_data in year_data.items():
+            if day not in DAYS or not isinstance(day_data, dict):
+                continue
+
+            for slot, value in day_data.items():
+                for lecture in lecture_to_dict(value):
+                    rows.append({
+                        "faculty": str(faculty).strip(),
+                        "year": year_normalized,
+                        "day": day,
+                        "slot": str(slot).strip(),
+                        "subject": lecture["subject"],
+                        "teacher": lecture["teacher"],
+                        "class_name": lecture["class_name"],
+                        "room": lecture["room"]
+                    })
+
+return rows
+
+============================================================
+
+DATABASE MODELS
+
+============================================================
 
 class User(db.Model):
-    __tablename__ = "users"
+tablename = "users"
 
-    id = db.Column(db.Integer, primary_key=True)
+id = db.Column(db.Integer, primary_key=True)
 
-    name = db.Column(db.String(200), nullable=False)
+name = db.Column(db.String(200), nullable=False)
 
-    username = db.Column(
-        db.String(100),
-        unique=True,
-        nullable=False,
-        index=True
-    )
+username = db.Column(
+    db.String(100),
+    unique=True,
+    nullable=False,
+    index=True
+)
 
-    password_hash = db.Column(db.String(300), nullable=False)
+password_hash = db.Column(db.String(300), nullable=False)
 
-    is_admin = db.Column(
-        db.Boolean,
-        default=False,
-        nullable=False
-    )
+is_admin = db.Column(
+    db.Boolean,
+    default=False,
+    nullable=False
+)
 
-    # For teacher accounts this stores the one subject they are allowed to
-    # mark. Admin accounts leave it empty and can mark every subject.
-    assigned_subject = db.Column(
-        db.String(300),
-        nullable=True,
-        index=True
-    )
+# For teacher accounts this stores the one subject they are allowed to
+# mark. Admin accounts leave it empty and can mark every subject.
+assigned_subject = db.Column(
+    db.String(300),
+    nullable=True,
+    index=True
+)
 
-    # Teachers may have only one active login at a time. The session is
-    # released only when that teacher explicitly logs out.
-    active_session_token = db.Column(
-        db.String(100),
-        nullable=True,
-        index=True
-    )
+# Teachers may have only one active login at a time. The session is
+# released only when that teacher explicitly logs out.
+active_session_token = db.Column(
+    db.String(100),
+    nullable=True,
+    index=True
+)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=now_ist_naive,
-        nullable=False
-    )
+created_at = db.Column(
+    db.DateTime,
+    default=now_ist_naive,
+    nullable=False
+)
 
-    attendance_records = db.relationship(
-        "Attendance",
-        back_populates="marked_by_user",
-        foreign_keys="Attendance.marked_by_user_id"
-    )
-
+attendance_records = db.relationship(
+    "Attendance",
+    back_populates="marked_by_user",
+    foreign_keys="Attendance.marked_by_user_id"
+)
 
 class Timetable(db.Model):
-    __tablename__ = "timetable"
+tablename = "timetable"
 
-    id = db.Column(db.Integer, primary_key=True)
+id = db.Column(db.Integer, primary_key=True)
 
-    faculty = db.Column(db.String(100), nullable=False, index=True)
-    year = db.Column(db.String(100), nullable=False, index=True)
-    day = db.Column(db.String(20), nullable=False, index=True)
+faculty = db.Column(db.String(100), nullable=False, index=True)
+year = db.Column(db.String(100), nullable=False, index=True)
+day = db.Column(db.String(20), nullable=False, index=True)
 
-    slot = db.Column(db.String(50), nullable=False, index=True)
-    subject = db.Column(db.String(300), nullable=False, index=True)
+slot = db.Column(db.String(50), nullable=False, index=True)
+subject = db.Column(db.String(300), nullable=False, index=True)
 
-    teacher = db.Column(db.String(200), nullable=True)
-    class_name = db.Column(db.String(200), nullable=True)
-    room = db.Column(db.String(100), nullable=True)
+teacher = db.Column(db.String(200), nullable=True)
+class_name = db.Column(db.String(200), nullable=True)
+room = db.Column(db.String(100), nullable=True)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=now_ist_naive,
-        nullable=False
-    )
+created_at = db.Column(
+    db.DateTime,
+    default=now_ist_naive,
+    nullable=False
+)
 
-    __table_args__ = (
-        UniqueConstraint(
-            "faculty",
-            "year",
-            "day",
-            "slot",
-            "subject",
-            name="uq_timetable_lecture"
-        ),
-    )
-
+__table_args__ = (
+    UniqueConstraint(
+        "faculty",
+        "year",
+        "day",
+        "slot",
+        "subject",
+        name="uq_timetable_lecture"
+    ),
+)
 
 class CollegeLocation(db.Model):
-    __tablename__ = "college_location"
+tablename = "college_location"
 
-    id = db.Column(db.Integer, primary_key=True)
-    latitude = db.Column(db.Float, nullable=False)
-    longitude = db.Column(db.Float, nullable=False)
-    radius_meters = db.Column(db.Float, nullable=False, default=150.0)
-    updated_at = db.Column(db.DateTime, default=now_ist_naive, nullable=False)
+id = db.Column(db.Integer, primary_key=True)
+latitude = db.Column(db.Float, nullable=False)
+longitude = db.Column(db.Float, nullable=False)
+radius_meters = db.Column(db.Float, nullable=False, default=150.0)
+updated_at = db.Column(db.DateTime, default=now_ist_naive, nullable=False)
 
 class Attendance(db.Model):
-    __tablename__ = "attendance"
+tablename = "attendance"
 
-    id = db.Column(db.Integer, primary_key=True)
+id = db.Column(db.Integer, primary_key=True)
 
-    record_date = db.Column(
-        db.Date,
-        nullable=False,
-        index=True
-    )
+record_date = db.Column(
+    db.Date,
+    nullable=False,
+    index=True
+)
 
-    faculty = db.Column(
-        db.String(100),
-        nullable=False,
-        index=True
-    )
+faculty = db.Column(
+    db.String(100),
+    nullable=False,
+    index=True
+)
 
-    year = db.Column(
-        db.String(100),
-        nullable=False,
-        index=True
-    )
+year = db.Column(
+    db.String(100),
+    nullable=False,
+    index=True
+)
 
-    class_name = db.Column(
-        db.String(200),
-        nullable=True,
-        index=True
-    )
+class_name = db.Column(
+    db.String(200),
+    nullable=True,
+    index=True
+)
 
-    day = db.Column(
-        db.String(20),
-        nullable=False,
-        index=True
-    )
+day = db.Column(
+    db.String(20),
+    nullable=False,
+    index=True
+)
 
-    slot = db.Column(
-        db.String(50),
-        nullable=False,
-        index=True
-    )
+slot = db.Column(
+    db.String(50),
+    nullable=False,
+    index=True
+)
 
-    subject = db.Column(
-        db.String(300),
-        nullable=False,
-        index=True
-    )
+subject = db.Column(
+    db.String(300),
+    nullable=False,
+    index=True
+)
 
-    teacher = db.Column(
-        db.String(200),
-        nullable=True
-    )
+teacher = db.Column(
+    db.String(200),
+    nullable=True
+)
 
-    status = db.Column(
-        db.String(30),
-        nullable=False,
-        index=True
-    )
+status = db.Column(
+    db.String(30),
+    nullable=False,
+    index=True
+)
 
-    marked_by_user_id = db.Column(
-        db.Integer,
-        db.ForeignKey("users.id"),
-        nullable=True
-    )
+marked_by_user_id = db.Column(
+    db.Integer,
+    db.ForeignKey("users.id"),
+    nullable=True
+)
 
-    marked_by = db.Column(
-        db.String(200),
-        nullable=True
-    )
+marked_by = db.Column(
+    db.String(200),
+    nullable=True
+)
 
-    # Number of students present in this lecture.
-    # It is written once when attendance is marked and never updated.
-    present_count = db.Column(
-        db.Integer,
-        nullable=False,
-        default=0
-    )
+# Number of students present in this lecture.
+# It is written once when attendance is marked and never updated.
+present_count = db.Column(
+    db.Integer,
+    nullable=False,
+    default=0
+)
 
-    marked_at = db.Column(
-        db.DateTime,
-        default=now_ist_naive,
-        nullable=False
-    )
+marked_at = db.Column(
+    db.DateTime,
+    default=now_ist_naive,
+    nullable=False
+)
 
-    marked_by_user = db.relationship(
-        "User",
-        back_populates="attendance_records",
-        foreign_keys=[marked_by_user_id]
-    )
+marked_by_user = db.relationship(
+    "User",
+    back_populates="attendance_records",
+    foreign_keys=[marked_by_user_id]
+)
 
-    __table_args__ = (
-        UniqueConstraint(
-            "record_date",
-            "faculty",
-            "year",
-            "class_name",
-            "day",
-            "slot",
-            "subject",
-            name="uq_attendance_lecture"
-        ),
-    )
+__table_args__ = (
+    UniqueConstraint(
+        "record_date",
+        "faculty",
+        "year",
+        "class_name",
+        "day",
+        "slot",
+        "subject",
+        name="uq_attendance_lecture"
+    ),
+)
 
+============================================================
 
-# ============================================================
-# DATABASE INITIALISATION
-# ============================================================
+DATABASE INITIALISATION
+
+============================================================
 
 def migrate_legacy_schema():
-    """
-    Make the application compatible with the user's earlier version of
-    this project. Flask-SQLAlchemy's create_all() does not add new columns
-    to an already-existing table, so the small migration below preserves
-    existing attendance records while adding the newer fields.
-    """
-    inspector = inspect(db.engine)
+"""
+Make the application compatible with the user's earlier version of
+this project. Flask-SQLAlchemy's create_all() does not add new columns
+to an already-existing table, so the small migration below preserves
+existing attendance records while adding the newer fields.
+"""
+inspector = inspect(db.engine)
 
-    tables = inspector.get_table_names()
+tables = inspector.get_table_names()
 
-    # Nothing to migrate on a completely new database.
-    if not tables:
+# Nothing to migrate on a completely new database.
+if not tables:
+    return
+
+def add_column_if_missing(table_name, column_name, sql_type):
+    if table_name not in inspect(db.engine).get_table_names():
         return
 
-    def add_column_if_missing(table_name, column_name, sql_type):
-        if table_name not in inspect(db.engine).get_table_names():
-            return
+    columns = {
+        col["name"]
+        for col in inspect(db.engine).get_columns(table_name)
+    }
 
-        columns = {
-            col["name"]
-            for col in inspect(db.engine).get_columns(table_name)
-        }
-
-        if column_name not in columns:
-            db.session.execute(
-                text(
-                    f"ALTER TABLE {table_name} "
-                    f"ADD COLUMN {column_name} {sql_type}"
-                )
+    if column_name not in columns:
+        db.session.execute(
+            text(
+                f"ALTER TABLE {table_name} "
+                f"ADD COLUMN {column_name} {sql_type}"
             )
-            db.session.commit()
+        )
+        db.session.commit()
 
-    # Legacy User model used attendance_access and did not have is_admin.
-    add_column_if_missing(
-        "users",
-        "is_admin",
-        "BOOLEAN NOT NULL DEFAULT 0"
-    )
+# Legacy User model used attendance_access and did not have is_admin.
+add_column_if_missing(
+    "users",
+    "is_admin",
+    "BOOLEAN NOT NULL DEFAULT 0"
+)
 
-    # Legacy Attendance model did not have these fields.
-    add_column_if_missing(
-        "attendance",
-        "class_name",
-        "VARCHAR(200)"
-    )
+# Legacy Attendance model did not have these fields.
+add_column_if_missing(
+    "attendance",
+    "class_name",
+    "VARCHAR(200)"
+)
 
-    add_column_if_missing(
-        "attendance",
-        "teacher",
-        "VARCHAR(200)"
-    )
+add_column_if_missing(
+    "attendance",
+    "teacher",
+    "VARCHAR(200)"
+)
 
-    add_column_if_missing(
-        "attendance",
-        "marked_by_user_id",
-        "INTEGER"
-    )
+add_column_if_missing(
+    "attendance",
+    "marked_by_user_id",
+    "INTEGER"
+)
 
-    # Attendance present-student count. Existing records receive 0.
-    add_column_if_missing(
-        "attendance",
-        "present_count",
-        "INTEGER NOT NULL DEFAULT 0"
-    )
+# Attendance present-student count. Existing records receive 0.
+add_column_if_missing(
+    "attendance",
+    "present_count",
+    "INTEGER NOT NULL DEFAULT 0"
+)
 
-    # Teacher subject permission.
-    add_column_if_missing(
-        "users",
-        "assigned_subject",
-        "VARCHAR(300)"
-    )
+# Teacher subject permission.
+add_column_if_missing(
+    "users",
+    "assigned_subject",
+    "VARCHAR(300)"
+)
 
-    # One active teacher login at a time.
-    add_column_if_missing(
-        "users",
-        "active_session_token",
-        "VARCHAR(100)"
-    )
-
+# One active teacher login at a time.
+add_column_if_missing(
+    "users",
+    "active_session_token",
+    "VARCHAR(100)"
+)
 
 def initialise_database():
-    db.create_all()
+db.create_all()
 
-    migrate_legacy_schema()
+migrate_legacy_schema()
 
-    # create_all() is run again so newly-created tables and indexes are
-    # visible after the lightweight legacy migration.
-    db.create_all()
+# create_all() is run again so newly-created tables and indexes are
+# visible after the lightweight legacy migration.
+db.create_all()
 
-    admin = User.query.filter_by(username=ADMIN_USERNAME).first()
+admin = User.query.filter_by(username=ADMIN_USERNAME).first()
 
-    if not admin:
-        admin = User(
-            name="Administrator",
-            username=ADMIN_USERNAME,
-            password_hash=generate_password_hash(ADMIN_PASSWORD),
-            is_admin=True
-        )
-        db.session.add(admin)
+if not admin:
+    admin = User(
+        name="Administrator",
+        username=ADMIN_USERNAME,
+        password_hash=generate_password_hash(ADMIN_PASSWORD),
+        is_admin=True
+    )
+    db.session.add(admin)
+    db.session.commit()
+else:
+    # Keep the configured account an admin.
+    if not admin.is_admin:
+        admin.is_admin = True
         db.session.commit()
+
+# The requested administrator is A.B.Kurhe. Keep the existing primary
+# admin username so current deployments do not lose their login.
+admin.name = ADMIN_DISPLAY_NAME
+admin.is_admin = True
+db.session.commit()
+
+# Create/update the five trial teacher accounts. Existing passwords are
+# preserved so redeploys do not unexpectedly reset credentials.
+for teacher_data in TRIAL_TEACHERS:
+    teacher = User.query.filter_by(username=teacher_data["username"]).first()
+    if not teacher:
+        teacher = User(
+            name=teacher_data["name"],
+            username=teacher_data["username"],
+            password_hash=generate_password_hash(teacher_data["password"]),
+            is_admin=False,
+            assigned_subject=teacher_data["subject"]
+        )
+        db.session.add(teacher)
     else:
-        # Keep the configured account an admin.
-        if not admin.is_admin:
-            admin.is_admin = True
-            db.session.commit()
+        teacher.name = teacher_data["name"]
+        teacher.is_admin = False
+        teacher.assigned_subject = teacher_data["subject"]
+db.session.commit()
 
-    # The requested administrator is A.B.Kurhe. Keep the existing primary
-    # admin username so current deployments do not lose their login.
-    admin.name = ADMIN_DISPLAY_NAME
-    admin.is_admin = True
-    db.session.commit()
+# Import timetable.json only when the timetable table is empty.
+# This preserves the user's existing timetable structure/data.
+if Timetable.query.count() == 0:
+    data = load_timetable_json()
+    rows = json_to_rows(data)
 
-    # Create/update the five trial teacher accounts. Existing passwords are
-    # preserved so redeploys do not unexpectedly reset credentials.
-    for teacher_data in TRIAL_TEACHERS:
-        teacher = User.query.filter_by(username=teacher_data["username"]).first()
-        if not teacher:
-            teacher = User(
-                name=teacher_data["name"],
-                username=teacher_data["username"],
-                password_hash=generate_password_hash(teacher_data["password"]),
-                is_admin=False,
-                assigned_subject=teacher_data["subject"]
-            )
-            db.session.add(teacher)
-        else:
-            teacher.name = teacher_data["name"]
-            teacher.is_admin = False
-            teacher.assigned_subject = teacher_data["subject"]
-    db.session.commit()
+    for row in rows:
+        db.session.add(Timetable(**row))
 
-    # Import timetable.json only when the timetable table is empty.
-    # This preserves the user's existing timetable structure/data.
-    if Timetable.query.count() == 0:
-        data = load_timetable_json()
-        rows = json_to_rows(data)
-
-        for row in rows:
-            db.session.add(Timetable(**row))
-
-        if rows:
-            db.session.commit()
-            print(f"Imported {len(rows)} timetable lecture rows from timetable.json.")
-
+    if rows:
+        db.session.commit()
+        print(f"Imported {len(rows)} timetable lecture rows from timetable.json.")
 
 with app.app_context():
-    initialise_database()
+initialise_database()
 
+============================================================
 
-# ============================================================
-# CURRENT USER / AUTHORIZATION
-# ============================================================
+CURRENT USER / AUTHORIZATION
+
+============================================================
 
 def current_user():
-    user_id = session.get("user_id")
+user_id = session.get("user_id")
 
-    if not user_id:
-        return None
+if not user_id:
+    return None
 
-    user = db.session.get(User, user_id)
-    if not user:
+user = db.session.get(User, user_id)
+if not user:
+    session.clear()
+    return None
+
+# Teacher sessions are tied to a server-side token. This prevents a
+# second login from being active at the same time.
+if not user.is_admin:
+    session_token = session.get("active_session_token")
+    if not session_token or session_token != user.active_session_token:
         session.clear()
         return None
 
-    # Teacher sessions are tied to a server-side token. This prevents a
-    # second login from being active at the same time.
-    if not user.is_admin:
-        session_token = session.get("active_session_token")
-        if not session_token or session_token != user.active_session_token:
-            session.clear()
-            return None
-
-    return user
-
+return user
 
 def login_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        if not current_user():
-            return redirect(
-                url_for(
-                    "login",
-                    next=request.full_path
-                )
-            )
-        return view(*args, **kwargs)
+@wraps(view)
+def wrapped(*args, **kwargs):
+if not current_user():
+return redirect(
+url_for(
+"login",
+next=request.full_path
+)
+)
+return view(*args, **kwargs)
 
-    return wrapped
-
+return wrapped
 
 def admin_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        user = current_user()
+@wraps(view)
+def wrapped(*args, **kwargs):
+user = current_user()
 
-        if not user:
-            return redirect(
-                url_for(
-                    "login",
-                    next=request.full_path
-                )
+    if not user:
+        return redirect(
+            url_for(
+                "login",
+                next=request.full_path
             )
+        )
 
-        if not user.is_admin:
-            flash("Administrator access is required.")
-            return redirect(url_for("home"))
+    if not user.is_admin:
+        flash("Administrator access is required.")
+        return redirect(url_for("home"))
 
-        return view(*args, **kwargs)
+    return view(*args, **kwargs)
 
-    return wrapped
+return wrapped
 
+============================================================
 
-# ============================================================
-# TIMETABLE DATABASE HELPERS
-# ============================================================
+TIMETABLE DATABASE HELPERS
+
+============================================================
 
 def all_faculties():
-    values = [
-        row[0]
-        for row in db.session.query(Timetable.faculty)
-        .distinct()
-        .all()
-    ]
+values = [
+row[0]
+for row in db.session.query(Timetable.faculty)
+.distinct()
+.all()
+]
 
-    if not values:
-        values = FACULTY_ORDER
+if not values:
+    values = FACULTY_ORDER
 
-    return ordered_faculties(values)
-
+return ordered_faculties(values)
 
 def years_for_faculty(faculty):
-    query = db.session.query(Timetable.year).distinct()
+query = db.session.query(Timetable.year).distinct()
 
-    if faculty:
-        query = query.filter(Timetable.faculty == faculty)
+if faculty:
+    query = query.filter(Timetable.faculty == faculty)
 
-    values = [row[0] for row in query.all()]
+values = [row[0] for row in query.all()]
 
-    if not values:
-        values = YEAR_ORDER
+if not values:
+    values = YEAR_ORDER
 
-    return ordered_years(values)
-
+return ordered_years(values)
 
 def timetable_rows(
-    faculty=None,
-    year=None,
-    day=None,
-    slot=None,
-    subject=None,
-    class_name=None
+faculty=None,
+year=None,
+day=None,
+slot=None,
+subject=None,
+class_name=None
 ):
-    query = Timetable.query
+query = Timetable.query
 
-    if faculty:
-        query = query.filter(Timetable.faculty == faculty)
+if faculty:
+    query = query.filter(Timetable.faculty == faculty)
 
-    if year:
-        query = query.filter(Timetable.year == year)
+if year:
+    query = query.filter(Timetable.year == year)
 
-    if day:
-        query = query.filter(Timetable.day == day)
+if day:
+    query = query.filter(Timetable.day == day)
 
-    if slot:
-        query = query.filter(Timetable.slot == slot)
+if slot:
+    query = query.filter(Timetable.slot == slot)
 
-    if subject:
-        query = query.filter(Timetable.subject == subject)
+if subject:
+    query = query.filter(Timetable.subject == subject)
 
-    if class_name:
-        query = query.filter(Timetable.class_name == class_name)
+if class_name:
+    query = query.filter(Timetable.class_name == class_name)
 
-    return query.order_by(
-        Timetable.day.asc(),
-        Timetable.slot.asc(),
-        Timetable.id.asc()
-    ).all()
-
+return query.order_by(
+    Timetable.day.asc(),
+    Timetable.slot.asc(),
+    Timetable.id.asc()
+).all()
 
 def slots_for_filters(faculty=None, year=None, day=None):
-    rows = timetable_rows(
-        faculty=faculty,
-        year=year,
-        day=day
-    )
+rows = timetable_rows(
+faculty=faculty,
+year=year,
+day=day
+)
 
-    slots = list(dict.fromkeys(row.slot for row in rows))
-    return sorted(slots, key=slot_start)
-
+slots = list(dict.fromkeys(row.slot for row in rows))
+return sorted(slots, key=slot_start)
 
 def subjects_for_filters(faculty=None, year=None):
-    rows = timetable_rows(
-        faculty=faculty,
-        year=year
-    )
+rows = timetable_rows(
+faculty=faculty,
+year=year
+)
 
-    return sorted(
-        set(row.subject for row in rows)
-    )
-
+return sorted(
+    set(row.subject for row in rows)
+)
 
 def classes_for_filters(faculty=None, year=None):
-    rows = timetable_rows(
-        faculty=faculty,
-        year=year
+rows = timetable_rows(
+faculty=faculty,
+year=year
+)
+
+values = sorted(
+    set(
+        row.class_name
+        for row in rows
+        if row.class_name
     )
+)
 
-    values = sorted(
-        set(
-            row.class_name
-            for row in rows
-            if row.class_name
-        )
-    )
-
-    return values
-
+return values
 
 def get_day_lectures(faculty, year, day):
-    return sorted(
-        timetable_rows(
-            faculty=faculty,
-            year=year,
-            day=day
-        ),
-        key=lambda row: (slot_start(row.slot), row.id)
-    )
+return sorted(
+timetable_rows(
+faculty=faculty,
+year=year,
+day=day
+),
+key=lambda row: (slot_start(row.slot), row.id)
+)
 
+============================================================
 
-# ============================================================
-# LIVE LECTURE HELPERS
-# ============================================================
+LIVE LECTURE HELPERS
+
+============================================================
 
 def is_current_slot(slot, day):
-    if day != now_ist().strftime("%A"):
-        return False
+if day != now_ist().strftime("%A"):
+return False
 
-    start, end = parse_slot(slot)
+start, end = parse_slot(slot)
 
-    if start is None or end is None:
-        return False
+if start is None or end is None:
+    return False
 
-    current = now_ist().hour * 60 + now_ist().minute
+current = now_ist().hour * 60 + now_ist().minute
 
-    return start <= current < end
-
+return start <= current < end
 
 def get_current_lectures(faculty, year):
-    today_name = now_ist().strftime("%A")
-    current = []
+today_name = now_ist().strftime("%A")
+current = []
 
-    for row in get_day_lectures(faculty, year, today_name):
-        if is_current_slot(row.slot, today_name):
-            current.append(row)
+for row in get_day_lectures(faculty, year, today_name):
+    if is_current_slot(row.slot, today_name):
+        current.append(row)
 
-    return current
-
+return current
 
 def get_next_lectures(faculty, year):
-    today_name = now_ist().strftime("%A")
-    current_minutes = now_ist().hour * 60 + now_ist().minute
+today_name = now_ist().strftime("%A")
+current_minutes = now_ist().hour * 60 + now_ist().minute
 
-    upcoming = []
+upcoming = []
 
-    for row in get_day_lectures(faculty, year, today_name):
-        start, end = parse_slot(row.slot)
+for row in get_day_lectures(faculty, year, today_name):
+    start, end = parse_slot(row.slot)
 
-        if start is not None and start > current_minutes:
-            upcoming.append(row)
+    if start is not None and start > current_minutes:
+        upcoming.append(row)
 
-    return upcoming
-
+return upcoming
 
 def live_payload(faculty, year):
-    current = get_current_lectures(faculty, year)
-    upcoming = get_next_lectures(faculty, year)
+current = get_current_lectures(faculty, year)
+upcoming = get_next_lectures(faculty, year)
 
-    def lecture_dict(row):
-        return {
-            "slot": row.slot,
-            "subject": row.subject,
-            "teacher": row.teacher or "",
-            "class_name": row.class_name or "",
-            "room": row.room or "",
-            "faculty": row.faculty,
-            "year": row.year
-        }
-
+def lecture_dict(row):
     return {
-        "date": today_ist().isoformat(),
-        "day": now_ist().strftime("%A"),
-        "time": now_ist().strftime("%d-%m-%Y %I:%M:%S %p"),
-        "faculty": faculty,
-        "year": year,
-        "current": [lecture_dict(x) for x in current],
-        "next": [lecture_dict(x) for x in upcoming]
+        "slot": row.slot,
+        "subject": row.subject,
+        "teacher": row.teacher or "",
+        "class_name": row.class_name or "",
+        "room": row.room or "",
+        "faculty": row.faculty,
+        "year": row.year
     }
 
+return {
+    "date": today_ist().isoformat(),
+    "day": now_ist().strftime("%A"),
+    "time": now_ist().strftime("%d-%m-%Y %I:%M:%S %p"),
+    "faculty": faculty,
+    "year": year,
+    "current": [lecture_dict(x) for x in current],
+    "next": [lecture_dict(x) for x in upcoming]
+}
 
-# ============================================================
-# ATTENDANCE HELPERS
-# ============================================================
+============================================================
+
+ATTENDANCE HELPERS
+
+============================================================
 
 VALID_STATUSES = {
-    "taken": "Taken",
-    "not_taken": "Not Taken",
-    "cancelled": "Cancelled"
+"taken": "Taken",
+"not_taken": "Not Taken",
+"cancelled": "Cancelled"
 }
 
 
 
 def get_college_location():
-    """Return the single configured college geofence, if an admin has set it."""
-    return CollegeLocation.query.first()
-
+"""Return the single configured college geofence, if an admin has set it."""
+return CollegeLocation.query.first()
 
 def distance_meters(lat1, lon1, lat2, lon2):
-    """Haversine distance between two GPS coordinates in meters."""
-    radius = 6371000.0
-    p1 = math.radians(float(lat1))
-    p2 = math.radians(float(lat2))
-    dp = math.radians(float(lat2) - float(lat1))
-    dl = math.radians(float(lon2) - float(lon1))
-    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
-    return radius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-
+"""Haversine distance between two GPS coordinates in meters."""
+radius = 6371000.0
+p1 = math.radians(float(lat1))
+p2 = math.radians(float(lat2))
+dp = math.radians(float(lat2) - float(lat1))
+dl = math.radians(float(lon2) - float(lon1))
+a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+return radius * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 def location_allowed(latitude, longitude):
-    """Check whether the supplied browser GPS point is inside the college geofence."""
-    location = get_college_location()
-    if not location:
-        return False, "College location has not been configured by the administrator."
+"""Check whether the supplied browser GPS point is inside the college geofence."""
+location = get_college_location()
+if not location:
+return False, "College location has not been configured by the administrator."
 
-    try:
-        lat = float(latitude)
-        lon = float(longitude)
-    except (TypeError, ValueError):
-        return False, "Valid device location is required."
+try:
+    lat = float(latitude)
+    lon = float(longitude)
+except (TypeError, ValueError):
+    return False, "Valid device location is required."
 
-    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
-        return False, "Invalid GPS coordinates."
+if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+    return False, "Invalid GPS coordinates."
 
-    distance = distance_meters(
-        location.latitude, location.longitude, lat, lon
+distance = distance_meters(
+    location.latitude, location.longitude, lat, lon
+)
+
+if distance > location.radius_meters:
+    return False, (
+        f"You are about {round(distance)} m away from the college. "
+        f"Attendance can be marked only within {round(location.radius_meters)} m of the college."
     )
 
-    if distance > location.radius_meters:
-        return False, (
-            f"You are about {round(distance)} m away from the college. "
-            f"Attendance can be marked only within {round(location.radius_meters)} m of the college."
-        )
-
-    return True, f"Location verified ({round(distance)} m from college)."
-
+return True, f"Location verified ({round(distance)} m from college)."
 
 def attendance_record_for(
-    record_date,
-    faculty,
-    year,
-    day,
-    slot,
-    subject,
-    class_name=""
+record_date,
+faculty,
+year,
+day,
+slot,
+subject,
+class_name=""
 ):
-    return Attendance.query.filter_by(
-        record_date=record_date,
-        faculty=faculty,
-        year=year,
-        day=day,
-        slot=slot,
-        subject=subject,
-        class_name=class_name or ""
-    ).first()
-
+return Attendance.query.filter_by(
+record_date=record_date,
+faculty=faculty,
+year=year,
+day=day,
+slot=slot,
+subject=subject,
+class_name=class_name or ""
+).first()
 
 def attendance_status_for(
-    record_date,
-    faculty,
-    year,
-    day,
-    slot,
-    subject,
-    class_name=""
+record_date,
+faculty,
+year,
+day,
+slot,
+subject,
+class_name=""
 ):
-    record = attendance_record_for(
-        record_date,
-        faculty,
-        year,
-        day,
-        slot,
-        subject,
-        class_name
-    )
+record = attendance_record_for(
+record_date,
+faculty,
+year,
+day,
+slot,
+subject,
+class_name
+)
 
-    return record.status if record else None
-
+return record.status if record else None
 
 def attendance_window_open(record_date, day, slot):
-    """Return True only while the lecture is actually running today (IST)."""
-    now = now_ist()
+"""Return True only while the lecture is actually running today (IST)."""
+now = now_ist()
 
-    if record_date != now.date():
-        return False
+if record_date != now.date():
+    return False
 
-    if day != now.strftime("%A"):
-        return False
+if day != now.strftime("%A"):
+    return False
 
-    start, end = parse_slot(slot)
+start, end = parse_slot(slot)
 
-    if start is None or end is None:
-        return False
+if start is None or end is None:
+    return False
 
-    current_minutes = now.hour * 60 + now.minute
-    return start <= current_minutes < end
-
+current_minutes = now.hour * 60 + now.minute
+return start <= current_minutes < end
 
 def attendance_query(
-    faculty=None,
-    year=None,
-    class_name=None,
-    start_date=None,
-    end_date=None,
-    subject=None,
-    slot=None,
-    status=None
+faculty=None,
+year=None,
+class_name=None,
+start_date=None,
+end_date=None,
+subject=None,
+slot=None,
+status=None
 ):
-    query = Attendance.query
+query = Attendance.query
 
-    if faculty:
-        query = query.filter(Attendance.faculty == faculty)
+if faculty:
+    query = query.filter(Attendance.faculty == faculty)
 
-    if year:
-        query = query.filter(Attendance.year == year)
+if year:
+    query = query.filter(Attendance.year == year)
 
-    if class_name:
-        query = query.filter(Attendance.class_name == class_name)
+if class_name:
+    query = query.filter(Attendance.class_name == class_name)
 
-    if start_date:
-        query = query.filter(Attendance.record_date >= start_date)
+if start_date:
+    query = query.filter(Attendance.record_date >= start_date)
 
-    if end_date:
-        query = query.filter(Attendance.record_date <= end_date)
+if end_date:
+    query = query.filter(Attendance.record_date <= end_date)
 
-    if subject:
-        query = query.filter(Attendance.subject == subject)
+if subject:
+    query = query.filter(Attendance.subject == subject)
 
-    if slot:
-        query = query.filter(Attendance.slot == slot)
+if slot:
+    query = query.filter(Attendance.slot == slot)
 
-    if status:
-        query = query.filter(Attendance.status == status)
+if status:
+    query = query.filter(Attendance.status == status)
 
-    return query.order_by(
-        Attendance.record_date.desc(),
-        Attendance.slot.asc(),
-        Attendance.faculty.asc(),
-        Attendance.year.asc(),
-        Attendance.subject.asc()
-    )
-
+return query.order_by(
+    Attendance.record_date.desc(),
+    Attendance.slot.asc(),
+    Attendance.faculty.asc(),
+    Attendance.year.asc(),
+    Attendance.subject.asc()
+)
 
 def attendance_stats(records):
-    total = len(records)
-    taken = sum(1 for x in records if x.status == "taken")
-    not_taken = sum(1 for x in records if x.status == "not_taken")
-    cancelled = sum(1 for x in records if x.status == "cancelled")
+total = len(records)
+taken = sum(1 for x in records if x.status == "taken")
+not_taken = sum(1 for x in records if x.status == "not_taken")
+cancelled = sum(1 for x in records if x.status == "cancelled")
 
-    # Attendance percentage is based on lectures marked Taken
-    # out of all non-cancelled recorded lectures.
-    denominator = taken + not_taken
+# Attendance percentage is based on lectures marked Taken
+# out of all non-cancelled recorded lectures.
+denominator = taken + not_taken
 
-    percentage = (
-        taken / denominator * 100
+percentage = (
+    taken / denominator * 100
+    if denominator
+    else 0
+)
+
+return {
+    "total": total,
+    "taken": taken,
+    "not_taken": not_taken,
+    "cancelled": cancelled,
+    "percentage": percentage
+}
+
+def subject_statistics(records):
+result = {}
+
+for record in records:
+    key = record.subject
+
+    if key not in result:
+        result[key] = {
+            "total": 0,
+            "taken": 0,
+            "not_taken": 0,
+            "cancelled": 0
+        }
+
+    result[key]["total"] += 1
+
+    if record.status == "taken":
+        result[key]["taken"] += 1
+    elif record.status == "not_taken":
+        result[key]["not_taken"] += 1
+    elif record.status == "cancelled":
+        result[key]["cancelled"] += 1
+
+for key, value in result.items():
+    denominator = value["taken"] + value["not_taken"]
+
+    value["percentage"] = (
+        value["taken"] / denominator * 100
         if denominator
         else 0
     )
 
-    return {
-        "total": total,
-        "taken": taken,
-        "not_taken": not_taken,
-        "cancelled": cancelled,
-        "percentage": percentage
-    }
-
-
-def subject_statistics(records):
-    result = {}
-
-    for record in records:
-        key = record.subject
-
-        if key not in result:
-            result[key] = {
-                "total": 0,
-                "taken": 0,
-                "not_taken": 0,
-                "cancelled": 0
-            }
-
-        result[key]["total"] += 1
-
-        if record.status == "taken":
-            result[key]["taken"] += 1
-        elif record.status == "not_taken":
-            result[key]["not_taken"] += 1
-        elif record.status == "cancelled":
-            result[key]["cancelled"] += 1
-
-    for key, value in result.items():
-        denominator = value["taken"] + value["not_taken"]
-
-        value["percentage"] = (
-            value["taken"] / denominator * 100
-            if denominator
-            else 0
-        )
-
-    return result
-
+return result
 
 def period_dates(period, custom_start=None, custom_end=None):
-    today = today_ist()
+today = today_ist()
 
-    if period == "today":
-        return today, today
-
-    if period == "week":
-        start = today - timedelta(days=today.weekday())
-        return start, start + timedelta(days=6)
-
-    if period == "month":
-        start = today.replace(day=1)
-
-        if start.month == 12:
-            next_month = start.replace(
-                year=start.year + 1,
-                month=1,
-                day=1
-            )
-        else:
-            next_month = start.replace(
-                month=start.month + 1,
-                day=1
-            )
-
-        return start, next_month - timedelta(days=1)
-
-    if period == "year":
-        return (
-            today.replace(month=1, day=1),
-            today.replace(month=12, day=31)
-        )
-
-    if period == "custom":
-        try:
-            start = datetime.strptime(
-                custom_start or "",
-                "%Y-%m-%d"
-            ).date()
-
-            end = datetime.strptime(
-                custom_end or "",
-                "%Y-%m-%d"
-            ).date()
-
-            if end < start:
-                start, end = end, start
-
-            return start, end
-        except Exception:
-            pass
-
+if period == "today":
     return today, today
 
+if period == "week":
+    start = today - timedelta(days=today.weekday())
+    return start, start + timedelta(days=6)
 
-# ============================================================
-# HTML / CSS
-# ============================================================
+if period == "month":
+    start = today.replace(day=1)
+
+    if start.month == 12:
+        next_month = start.replace(
+            year=start.year + 1,
+            month=1,
+            day=1
+        )
+    else:
+        next_month = start.replace(
+            month=start.month + 1,
+            day=1
+        )
+
+    return start, next_month - timedelta(days=1)
+
+if period == "year":
+    return (
+        today.replace(month=1, day=1),
+        today.replace(month=12, day=31)
+    )
+
+if period == "custom":
+    try:
+        start = datetime.strptime(
+            custom_start or "",
+            "%Y-%m-%d"
+        ).date()
+
+        end = datetime.strptime(
+            custom_end or "",
+            "%Y-%m-%d"
+        ).date()
+
+        if end < start:
+            start, end = end, start
+
+        return start, end
+    except Exception:
+        pass
+
+return today, today
+
+============================================================
+
+HTML / CSS
+
+============================================================
 
 BASE_HTML = r"""
+
 <!doctype html>
+
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -2431,136 +2411,130 @@ function escapeHtml(value) {
 
 setInterval(reloadLiveLecture, 15000);
 </script>
+
 </head>
 
 <body>
 
 <nav class="navbar">
 
-    <a href="{{ url_for('home') }}" class="brand">
-        <img
-            src="{{ url_for('static', filename='college-logo.png') }}"
-            alt="SGB College Logo"
-            class="college-logo"
-        >
-        <div class="logo">
-            SGB COLLEGE,Purna
-            <small>COLLEGE MANAGEMENT SYSTEM</small>
-        </div>
+<a href="{{ url_for('home') }}" class="brand">
+    <img
+        src="{{ url_for('static', filename='college-logo.png') }}"
+        alt="SGB College Logo"
+        class="college-logo"
+    >
+    <div class="logo">
+        SGB COLLEGE,Purna
+        <small>COLLEGE MANAGEMENT SYSTEM</small>
+    </div>
+</a>
+
+<div class="nav-links">
+
+    <a href="{{ url_for('home') }}">
+        <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>
+        </span>
+        <span>Dashboard</span>
     </a>
 
-    <div class="nav-links">
+    <a href="{{ url_for('master_timetable') }}">
+        <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M7 14h3M14 14h3M7 18h3M14 18h3"/></svg>
+        </span>
+        <span>All Classes / Master Timetable</span>
+    </a>
 
-        <a href="{{ url_for('home') }}">
+    <a href="{{ url_for('timetable_page') }}">
+        <span class="nav-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </span>
+        <span>Daily Timetable</span>
+    </a>
+
+    {% if current_user_obj and current_user_obj.is_admin %}
+        <a href="{{ url_for('attendance') }}">
             <span class="nav-icon">
-                <svg viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9 21v-7h6v7"/></svg>
+                <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3.5h6"/><path d="m8 12 2 2 5-5"/><path d="M8 17h8"/></svg>
             </span>
-            <span>Dashboard</span>
+            <span>Attendance</span>
         </a>
 
-        <a href="{{ url_for('master_timetable') }}">
+        <a href="{{ url_for('reports') }}">
             <span class="nav-icon">
-                <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M7 14h3M14 14h3M7 18h3M14 18h3"/></svg>
+                <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
             </span>
-            <span>All Classes / Master Timetable</span>
+            <span>Reports</span>
         </a>
 
-        <a href="{{ url_for('timetable_page') }}">
+        <a href="{{ url_for('access_control') }}">
             <span class="nav-icon">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c.5-3.5 2.5-5 6-5s5.5 1.5 6 5"/><path d="M15 15c3 0 5 1.5 5.5 5"/></svg>
             </span>
-            <span>Daily Timetable</span>
+            <span>Users</span>
         </a>
 
-        {% if current_user_obj and current_user_obj.is_admin %}
-            <a href="{{ url_for('attendance') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3.5h6"/><path d="m8 12 2 2 5-5"/><path d="M8 17h8"/></svg>
-                </span>
-                <span>Attendance</span>
-            </a>
+        <a href="{{ url_for('college_location') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            </span>
+            <span>College Location</span>
+        </a>
 
-            <a href="{{ url_for('reports') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-                </span>
-                <span>Reports</span>
-            </a>
+        <a href="{{ url_for('timetable_manage') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="7"/></svg>
+            </span>
+            <span>Manage Timetable</span>
+        </a>
 
-            <a href="{{ url_for('attendance_import') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
-                </span>
-                <span>Import Attendance</span>
-            </a>
+        <a href="{{ url_for('logout') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M9 12h9"/></svg>
+            </span>
+            <span>Logout</span>
+        </a>
 
-            <a href="{{ url_for('access_control') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c.5-3.5 2.5-5 6-5s5.5 1.5 6 5"/><path d="M15 15c3 0 5 1.5 5.5 5"/></svg>
-                </span>
-                <span>Users</span>
-            </a>
+    {% elif current_user_obj and current_user_obj.assigned_subject %}
 
-            <a href="{{ url_for('college_location') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
-                </span>
-                <span>College Location</span>
-            </a>
+        <a href="{{ url_for('attendance') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m8 12 2 2 5-5"/><path d="M8 17h8"/></svg>
+            </span>
+            <span>Attendance</span>
+        </a>
 
-            <a href="{{ url_for('timetable_manage') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6 7 7M17 17l1.4 1.4M18.4 5.6 17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="7"/></svg>
-                </span>
-                <span>Manage Timetable</span>
-            </a>
+        <a href="{{ url_for('logout') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M9 12h9"/></svg>
+            </span>
+            <span>Logout</span>
+        </a>
 
-            <a href="{{ url_for('logout') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M9 12h9"/></svg>
-                </span>
-                <span>Logout</span>
-            </a>
+    {% else %}
 
-        {% elif current_user_obj and current_user_obj.assigned_subject %}
+        <a href="{{ url_for('login') }}">
+            <span class="nav-icon">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/><path d="M19 8h2M20 7v2"/></svg>
+            </span>
+            <span>Login</span>
+        </a>
 
-            <a href="{{ url_for('attendance') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="m8 12 2 2 5-5"/><path d="M8 17h8"/></svg>
-                </span>
-                <span>Attendance</span>
-            </a>
+    {% endif %}
+</div>
 
-            <a href="{{ url_for('logout') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><path d="M10 4H5v16h5"/><path d="M14 8l4 4-4 4"/><path d="M9 12h9"/></svg>
-                </span>
-                <span>Logout</span>
-            </a>
 
-        {% else %}
-
-            <a href="{{ url_for('login') }}">
-                <span class="nav-icon">
-                    <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M5 21c.7-4 3-6 7-6s6.3 2 7 6"/><path d="M19 8h2M20 7v2"/></svg>
-                </span>
-                <span>Login</span>
-            </a>
-
-        {% endif %}
-    </div>
-
-    
 </nav>
 
 <div class="container">
 
 {% with messages = get_flashed_messages() %}
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
+{% if messages %}
+{% for message in messages %}
+<div class="alert">{{ message }}</div>
+{% endfor %}
+{% endif %}
 {% endwith %}
 
 {{ content|safe }}
@@ -2575,78 +2549,79 @@ setInterval(reloadLiveLecture, 15000);
 </html>
 """
 
-
 def render_page(content, **context):
-    # Some pages (especially Attendance) need current_user_obj while their
-    # inner template is rendered. Do not pass that same keyword twice to the
-    # outer BASE_HTML template, otherwise Flask/Jinja raises a 500 error.
-    page_user = context.get("current_user_obj") or current_user()
+# Some pages (especially Attendance) need current_user_obj while their
+# inner template is rendered. Do not pass that same keyword twice to the
+# outer BASE_HTML template, otherwise Flask/Jinja raises a 500 error.
+page_user = context.get("current_user_obj") or current_user()
 
-    body = render_template_string(content, **context)
+body = render_template_string(content, **context)
 
-    context.pop("current_user_obj", None)
-    page_title = context.pop(
-        "page_title",
-        "SGB College Management"
-    )
+context.pop("current_user_obj", None)
+page_title = context.pop(
+    "page_title",
+    "SGB College Management"
+)
 
-    return render_template_string(
-        BASE_HTML,
-        content=body,
-        current_user_obj=page_user,
-        page_title=page_title,
-        **context
-    )
+return render_template_string(
+    BASE_HTML,
+    content=body,
+    current_user_obj=page_user,
+    page_title=page_title,
+    **context
+)
 
+============================================================
 
-# ============================================================
-# DASHBOARD
-# ============================================================
+DASHBOARD
+
+============================================================
 
 @app.route("/")
 def home():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        faculties[0] if faculties else ""
-    )
+faculty = request.args.get(
+    "faculty",
+    faculties[0] if faculties else ""
+)
 
-    years = years_for_faculty(faculty)
+years = years_for_faculty(faculty)
 
-    year = request.args.get(
-        "year",
-        years[0] if years else ""
-    )
+year = request.args.get(
+    "year",
+    years[0] if years else ""
+)
 
-    today_name = now_ist().strftime("%A")
+today_name = now_ist().strftime("%A")
 
-    today_rows = get_day_lectures(
-        faculty,
-        year,
-        today_name
-    )
+today_rows = get_day_lectures(
+    faculty,
+    year,
+    today_name
+)
 
-    current = get_current_lectures(
-        faculty,
-        year
-    )
+current = get_current_lectures(
+    faculty,
+    year
+)
 
-    upcoming = get_next_lectures(
-        faculty,
-        year
-    )
+upcoming = get_next_lectures(
+    faculty,
+    year
+)
 
-    records_today = attendance_query(
-        faculty=faculty,
-        year=year,
-        start_date=today_ist(),
-        end_date=today_ist()
-    ).all()
+records_today = attendance_query(
+    faculty=faculty,
+    year=year,
+    start_date=today_ist(),
+    end_date=today_ist()
+).all()
 
-    stats = attendance_stats(records_today)
+stats = attendance_stats(records_today)
 
-    content = r"""
+content = r"""
+
 <div class="hero dashboard-hero">
     <img src="{{ url_for('static', filename='college-logo.png') }}"
          alt="College Logo" class="hero-logo">
@@ -2861,139 +2836,143 @@ async function prepareAttendanceForm(form, submitter) {
     return false;
 }
 </script>
+
 """
 
-    return render_page(
-        content,
-        faculties=faculties,
-        faculty=faculty,
-        years=years,
-        year=year,
-        today_name=today_name,
-        current=current,
-        upcoming=upcoming,
-        today_rows=today_rows,
-        stats=stats,
-        is_current_slot=is_current_slot,
-        now_time=now_ist().strftime("%d-%m-%Y %I:%M:%S %p"),
-        page_title="Dashboard"
-    )
+return render_page(
+    content,
+    faculties=faculties,
+    faculty=faculty,
+    years=years,
+    year=year,
+    today_name=today_name,
+    current=current,
+    upcoming=upcoming,
+    today_rows=today_rows,
+    stats=stats,
+    is_current_slot=is_current_slot,
+    now_time=now_ist().strftime("%d-%m-%Y %I:%M:%S %p"),
+    page_title="Dashboard"
+)
 
+============================================================
 
-# ============================================================
-# LIVE API
-# ============================================================
+LIVE API
+
+============================================================
 
 @app.route("/api/live")
 def api_live():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        faculties[0] if faculties else ""
-    )
+faculty = request.args.get(
+    "faculty",
+    faculties[0] if faculties else ""
+)
 
-    years = years_for_faculty(faculty)
+years = years_for_faculty(faculty)
 
-    year = request.args.get(
-        "year",
-        years[0] if years else ""
-    )
+year = request.args.get(
+    "year",
+    years[0] if years else ""
+)
 
-    return live_payload(faculty, year)
+return live_payload(faculty, year)
 
+============================================================
 
-# ============================================================
-# MASTER TIMETABLE DISPLAY HELPERS
-# ============================================================
+MASTER TIMETABLE DISPLAY HELPERS
+
+============================================================
 
 def short_subject_label(value):
-    """Make timetable category labels compact and consistent for display."""
-    import re
-    text = str(value or "").strip()
-    text = re.sub(r"^Major\s*:", "Maj:", text, flags=re.IGNORECASE)
-    text = re.sub(r"^Minor\s*:", "Min:", text, flags=re.IGNORECASE)
-    text = re.sub(r"^Major\s+", "Maj: ", text, flags=re.IGNORECASE)
-    text = re.sub(r"^Minor\s+", "Min: ", text, flags=re.IGNORECASE)
-    return text
-
+"""Make timetable category labels compact and consistent for display."""
+import re
+text = str(value or "").strip()
+text = re.sub(r"^Major\s*:", "Maj:", text, flags=re.IGNORECASE)
+text = re.sub(r"^Minor\s*:", "Min:", text, flags=re.IGNORECASE)
+text = re.sub(r"^Major\s+", "Maj: ", text, flags=re.IGNORECASE)
+text = re.sub(r"^Minor\s+", "Min: ", text, flags=re.IGNORECASE)
+return text
 
 def subject_color_class(value):
-    """Return a stable color class so the same subject keeps the same color."""
-    key = normalize_subject(value) if 'normalize_subject' in globals() else str(value or '').strip().lower()
-    colors = {
-        "physics": "subject-blue",
-        "chemistry": "subject-purple",
-        "computer science": "subject-green",
-        "mathematics": "subject-orange",
-        "microbiology": "subject-teal",
-        "botany": "subject-olive",
-        "zoology": "subject-pink",
-        "english": "subject-indigo",
-    }
-    return colors.get(key, "subject-slate")
+"""Return a stable color class so the same subject keeps the same color."""
+key = normalize_subject(value) if 'normalize_subject' in globals() else str(value or '').strip().lower()
+colors = {
+"physics": "subject-blue",
+"chemistry": "subject-purple",
+"computer science": "subject-green",
+"mathematics": "subject-orange",
+"microbiology": "subject-teal",
+"botany": "subject-olive",
+"zoology": "subject-pink",
+"english": "subject-indigo",
+}
+return colors.get(key, "subject-slate")
 
+============================================================
 
-# ============================================================
-# MASTER TIMETABLE
-# ============================================================
+MASTER TIMETABLE
+
+============================================================
 
 @app.route("/master")
 def master_timetable():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        ""
+faculty = request.args.get(
+    "faculty",
+    ""
+)
+
+year = request.args.get(
+    "year",
+    ""
+)
+
+if faculty:
+    years = years_for_faculty(faculty)
+else:
+    years = ordered_years(
+        [
+            row[0]
+            for row in db.session.query(Timetable.year)
+            .distinct()
+            .all()
+        ]
     )
 
-    year = request.args.get(
-        "year",
-        ""
-    )
+# Build row/column matrix:
+# rows = time slots
+# columns = Monday-Saturday
+query = Timetable.query
 
-    if faculty:
-        years = years_for_faculty(faculty)
-    else:
-        years = ordered_years(
-            [
-                row[0]
-                for row in db.session.query(Timetable.year)
-                .distinct()
-                .all()
-            ]
-        )
+if faculty:
+    query = query.filter(Timetable.faculty == faculty)
 
-    # Build row/column matrix:
-    # rows = time slots
-    # columns = Monday-Saturday
-    query = Timetable.query
+if year:
+    query = query.filter(Timetable.year == year)
 
-    if faculty:
-        query = query.filter(Timetable.faculty == faculty)
+rows = query.all()
 
-    if year:
-        query = query.filter(Timetable.year == year)
+slots = sorted(
+    set(row.slot for row in rows),
+    key=slot_start
+)
 
-    rows = query.all()
+matrix = {}
 
-    slots = sorted(
-        set(row.slot for row in rows),
-        key=slot_start
-    )
+for slot in slots:
+    matrix[slot] = {}
 
-    matrix = {}
+    for day in DAYS:
+        matrix[slot][day] = [
+            row for row in rows
+            if row.slot == slot and row.day == day
+        ]
 
-    for slot in slots:
-        matrix[slot] = {}
+content = r"""
 
-        for day in DAYS:
-            matrix[slot][day] = [
-                row for row in rows
-                if row.slot == slot and row.day == day
-            ]
-
-    content = r"""
 <div class="hero">
     <h1>📚 ALL CLASS / MASTER TIMETABLE</h1>
     <p>Rows = time slots • Columns = Monday to Saturday</p>
@@ -3002,44 +2981,45 @@ def master_timetable():
 <form class="filters" method="get">
     <div class="filter-grid">
 
-        <div>
-            <label>Faculty</label>
-            <select name="faculty" onchange="this.form.submit()">
-                <option value="">All Faculties</option>
-                {% for f in faculties %}
-                    <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
-                        {{ f }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Year</label>
-            <select name="year">
-                <option value="">All Years</option>
-                {% for y in years %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>
-                        {{ y }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>&nbsp;</label>
-            <button class="btn btn-blue" type="submit">
-                Filter Timetable
-            </button>
-        </div>
-
-        <div>
-            <label>&nbsp;</label>
-            <a class="btn btn-gray" href="{{ url_for('master_timetable') }}">
-                Show All
-            </a>
-        </div>
+    <div>
+        <label>Faculty</label>
+        <select name="faculty" onchange="this.form.submit()">
+            <option value="">All Faculties</option>
+            {% for f in faculties %}
+                <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
+                    {{ f }}
+                </option>
+            {% endfor %}
+        </select>
     </div>
+
+    <div>
+        <label>Year</label>
+        <select name="year">
+            <option value="">All Years</option>
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>
+                    {{ y }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>&nbsp;</label>
+        <button class="btn btn-blue" type="submit">
+            Filter Timetable
+        </button>
+    </div>
+
+    <div>
+        <label>&nbsp;</label>
+        <a class="btn btn-gray" href="{{ url_for('master_timetable') }}">
+            Show All
+        </a>
+    </div>
+</div>
+
 </form>
 
 <div class="section">
@@ -3050,140 +3030,143 @@ def master_timetable():
             {% if year %} • {{ year }}{% endif %}
         </h2>
 
-        <a class="btn btn-purple" href="{{ url_for('timetable_page', faculty=faculty, year=year) }}">
-            Daily View
-        </a>
-    </div>
+    <a class="btn btn-purple" href="{{ url_for('timetable_page', faculty=faculty, year=year) }}">
+        Daily View
+    </a>
+</div>
 
-    {% if slots %}
-        <div class="table-wrap">
-            <table class="master-table">
-                <thead>
+{% if slots %}
+    <div class="table-wrap">
+        <table class="master-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    {% for day in days %}
+                        <th>{{ day }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for slot in slots %}
                     <tr>
-                        <th>Time</th>
+                        <td class="slot-cell">
+                            {{ slot }}
+                        </td>
+
                         {% for day in days %}
-                            <th>{{ day }}</th>
+                            <td>
+                                {% for row in matrix[slot][day] %}
+                                    <div class="lecture-cell {{ subject_color_class(row.subject) }} {% if is_current_slot(row.slot, day) %}current-cell{% endif %}">
+                                        <strong class="subject-name">{{ short_subject_label(row.subject) }}</strong>
+
+                                        <div class="meta">
+                                            {{ row.faculty }} • {{ row.year }}
+                                        </div>
+
+                                        {% if row.class_name %}
+                                            <div class="meta">
+                                                Class: {{ row.class_name }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if row.teacher %}
+                                            <div class="meta">
+                                                Teacher: {{ row.teacher }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if row.room %}
+                                            <div class="meta">
+                                                Room: {{ row.room }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if is_current_slot(row.slot, day) %}
+                                            <br>
+                                            <span class="badge badge-live">LIVE</span>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span style="color:#94a3b8;">—</span>
+                                {% endfor %}
+                            </td>
                         {% endfor %}
                     </tr>
-                </thead>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="empty">
+        No timetable records found.
+    </div>
+{% endif %}
 
-                <tbody>
-                    {% for slot in slots %}
-                        <tr>
-                            <td class="slot-cell">
-                                {{ slot }}
-                            </td>
-
-                            {% for day in days %}
-                                <td>
-                                    {% for row in matrix[slot][day] %}
-                                        <div class="lecture-cell {{ subject_color_class(row.subject) }} {% if is_current_slot(row.slot, day) %}current-cell{% endif %}">
-                                            <strong class="subject-name">{{ short_subject_label(row.subject) }}</strong>
-
-                                            <div class="meta">
-                                                {{ row.faculty }} • {{ row.year }}
-                                            </div>
-
-                                            {% if row.class_name %}
-                                                <div class="meta">
-                                                    Class: {{ row.class_name }}
-                                                </div>
-                                            {% endif %}
-
-                                            {% if row.teacher %}
-                                                <div class="meta">
-                                                    Teacher: {{ row.teacher }}
-                                                </div>
-                                            {% endif %}
-
-                                            {% if row.room %}
-                                                <div class="meta">
-                                                    Room: {{ row.room }}
-                                                </div>
-                                            {% endif %}
-
-                                            {% if is_current_slot(row.slot, day) %}
-                                                <br>
-                                                <span class="badge badge-live">LIVE</span>
-                                            {% endif %}
-                                        </div>
-                                    {% else %}
-                                        <span style="color:#94a3b8;">—</span>
-                                    {% endfor %}
-                                </td>
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="empty">
-            No timetable records found.
-        </div>
-    {% endif %}
 </div>
 """
 
-    return render_page(
-        content,
-        faculties=faculties,
-        years=years,
-        faculty=faculty,
-        year=year,
-        days=DAYS,
-        slots=slots,
-        matrix=matrix,
-        is_current_slot=is_current_slot,
-        short_subject_label=short_subject_label,
-        subject_color_class=subject_color_class,
-        page_title="Master Timetable"
-    )
-
-
-# Alias requested wording.
-app.add_url_rule(
-    "/all-classes",
-    endpoint="all_classes",
-    view_func=master_timetable
+return render_page(
+    content,
+    faculties=faculties,
+    years=years,
+    faculty=faculty,
+    year=year,
+    days=DAYS,
+    slots=slots,
+    matrix=matrix,
+    is_current_slot=is_current_slot,
+    short_subject_label=short_subject_label,
+    subject_color_class=subject_color_class,
+    page_title="Master Timetable"
 )
 
+Alias requested wording.
 
-# ============================================================
-# DAILY TIMETABLE
-# ============================================================
+app.add_url_rule(
+"/all-classes",
+endpoint="all_classes",
+view_func=master_timetable
+)
+
+============================================================
+
+DAILY TIMETABLE
+
+============================================================
 
 @app.route("/timetable")
 def timetable_page():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        faculties[0] if faculties else ""
-    )
+faculty = request.args.get(
+    "faculty",
+    faculties[0] if faculties else ""
+)
 
-    years = years_for_faculty(faculty)
+years = years_for_faculty(faculty)
 
-    year = request.args.get(
-        "year",
-        years[0] if years else ""
-    )
+year = request.args.get(
+    "year",
+    years[0] if years else ""
+)
 
-    day = request.args.get(
-        "day",
-        now_ist().strftime("%A")
-    )
+day = request.args.get(
+    "day",
+    now_ist().strftime("%A")
+)
 
-    if day not in DAYS:
-        day = "Monday"
+if day not in DAYS:
+    day = "Monday"
 
-    rows = get_day_lectures(
-        faculty,
-        year,
-        day
-    )
+rows = get_day_lectures(
+    faculty,
+    year,
+    day
+)
 
-    content = r"""
+content = r"""
+
 <div class="hero">
     <h1>📅 Daily Timetable</h1>
     <p>{{ faculty }} • {{ year }} • {{ day }}</p>
@@ -3192,39 +3175,40 @@ def timetable_page():
 <form class="filters" method="get">
     <div class="filter-grid">
 
-        <div>
-            <label>Faculty</label>
-            <select name="faculty" onchange="this.form.submit()">
-                {% for f in faculties %}
-                    <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
-                        {{ f }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Year</label>
-            <select name="year" onchange="this.form.submit()">
-                {% for y in years %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>
-                        {{ y }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Day</label>
-            <select name="day" onchange="this.form.submit()">
-                {% for d in days %}
-                    <option value="{{ d }}" {% if d == day %}selected{% endif %}>
-                        {{ d }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
+    <div>
+        <label>Faculty</label>
+        <select name="faculty" onchange="this.form.submit()">
+            {% for f in faculties %}
+                <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
+                    {{ f }}
+                </option>
+            {% endfor %}
+        </select>
     </div>
+
+    <div>
+        <label>Year</label>
+        <select name="year" onchange="this.form.submit()">
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>
+                    {{ y }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Day</label>
+        <select name="day" onchange="this.form.submit()">
+            {% for d in days %}
+                <option value="{{ d }}" {% if d == day %}selected{% endif %}>
+                    {{ d }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
 </form>
 
 <div class="section">
@@ -3235,80 +3219,83 @@ def timetable_page():
         </a>
     </div>
 
-    {% if rows %}
-        <div class="table-wrap">
-            <table class="daily-timetable-table">
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Faculty</th>
-                        <th>Year</th>
-                        <th>Class</th>
-                        <th>Subject</th>
-                        <th>Teacher</th>
-                        <th>Room</th>
-                        <th>Live</th>
-                    </tr>
-                </thead>
+{% if rows %}
+    <div class="table-wrap">
+        <table class="daily-timetable-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>Faculty</th>
+                    <th>Year</th>
+                    <th>Class</th>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th>Room</th>
+                    <th>Live</th>
+                </tr>
+            </thead>
 
-                <tbody>
-                    {% for row in rows %}
-                        <tr>
-                            <td><strong>{{ row.slot }}</strong></td>
-                            <td>{{ row.faculty }}</td>
-                            <td>{{ row.year }}</td>
-                            <td>{{ row.class_name or "—" }}</td>
-                            <td><span class="subject-badge subject-color-{{ loop.index0 % 8 }}">{{ row.subject }}</span></td>
-                            <td>{{ row.teacher or "—" }}</td>
-                            <td>{{ row.room or "—" }}</td>
-                            <td>
-                                {% if is_current_slot(row.slot, day) %}
-                                    <span class="badge badge-live">LIVE</span>
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="empty">
-            No timetable available.
-        </div>
-    {% endif %}
+            <tbody>
+                {% for row in rows %}
+                    <tr>
+                        <td><strong>{{ row.slot }}</strong></td>
+                        <td>{{ row.faculty }}</td>
+                        <td>{{ row.year }}</td>
+                        <td>{{ row.class_name or "—" }}</td>
+                        <td><span class="subject-badge subject-color-{{ loop.index0 % 8 }}">{{ row.subject }}</span></td>
+                        <td>{{ row.teacher or "—" }}</td>
+                        <td>{{ row.room or "—" }}</td>
+                        <td>
+                            {% if is_current_slot(row.slot, day) %}
+                                <span class="badge badge-live">LIVE</span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="empty">
+        No timetable available.
+    </div>
+{% endif %}
+
 </div>
 """
 
-    return render_page(
-        content,
-        faculties=faculties,
-        years=years,
-        faculty=faculty,
-        year=year,
-        day=day,
-        days=DAYS,
-        rows=rows,
-        is_current_slot=is_current_slot,
-        page_title="Daily Timetable"
-    )
+return render_page(
+    content,
+    faculties=faculties,
+    years=years,
+    faculty=faculty,
+    year=year,
+    day=day,
+    days=DAYS,
+    rows=rows,
+    is_current_slot=is_current_slot,
+    page_title="Daily Timetable"
+)
 
+============================================================
 
-# ============================================================
-# TEACHER LOCATION VERIFICATION AT LOGIN
-# ============================================================
+TEACHER LOCATION VERIFICATION AT LOGIN
+
+============================================================
 
 @app.route("/teacher-location")
 @login_required
 def teacher_location():
-    user = current_user()
-    if not user or user.is_admin:
-        return redirect(url_for("home"))
+user = current_user()
+if not user or user.is_admin:
+return redirect(url_for("home"))
 
-    # A teacher must verify their current GPS location before attendance is
-    # available. Attendance POST also checks the live GPS position again.
-    content = r"""
+# A teacher must verify their current GPS location before attendance is
+# available. Attendance POST also checks the live GPS position again.
+content = r"""
+
 <div class="hero">
     <h1>📍 Location Verification Required</h1>
     <p>Allow your phone/browser location before you can mark attendance.</p>
@@ -3318,19 +3305,20 @@ def teacher_location():
     <h2>Teacher: {{ current_user_obj.name }}</h2>
     <p>Your attendance access will open only after your current location is verified inside the college area.</p>
 
-    <div id="locationStatus" style="padding:14px;border-radius:10px;background:#f1f5f9;margin:14px 0;">
-        📍 Requesting location permission...
-    </div>
+<div id="locationStatus" style="padding:14px;border-radius:10px;background:#f1f5f9;margin:14px 0;">
+    📍 Requesting location permission...
+</div>
 
-    <button type="button" class="btn btn-blue" id="locationButton" onclick="requestTeacherLocation()">
-        📍 Allow Location & Continue
-    </button>
+<button type="button" class="btn btn-blue" id="locationButton" onclick="requestTeacherLocation()">
+    📍 Allow Location & Continue
+</button>
 
-    <p style="margin-top:14px;font-size:13px;color:#667085;">
-        If no permission popup appears, open your browser site settings for this website and set
-        <b>Location → Allow</b>, then reload this page. You must be physically inside the configured
-        college area.
-    </p>
+<p style="margin-top:14px;font-size:13px;color:#667085;">
+    If no permission popup appears, open your browser site settings for this website and set
+    <b>Location → Allow</b>, then reload this page. You must be physically inside the configured
+    college area.
+</p>
+
 </div>
 
 <script>
@@ -3383,312 +3371,313 @@ function requestTeacherLocation() {
 // was previously denied or the browser requires a user gesture.
 window.addEventListener('load', requestTeacherLocation);
 </script>
-"""
-    return render_page(
-        content,
-        current_user_obj=user,
-        page_title="Teacher Location Verification"
-    )
 
+"""
+return render_page(
+content,
+current_user_obj=user,
+page_title="Teacher Location Verification"
+)
 
 @app.route("/teacher-location/verify", methods=["POST"])
 @login_required
 def verify_teacher_location():
-    user = current_user()
-    if not user or user.is_admin:
-        return jsonify(ok=False, message="Teacher location verification is not required for this account."), 403
+user = current_user()
+if not user or user.is_admin:
+return jsonify(ok=False, message="Teacher location verification is not required for this account."), 403
 
-    latitude = request.form.get("latitude", "").strip()
-    longitude = request.form.get("longitude", "").strip()
+latitude = request.form.get("latitude", "").strip()
+longitude = request.form.get("longitude", "").strip()
 
-    allowed, message = location_allowed(latitude, longitude)
-    if not allowed:
-        session["location_verified"] = False
-        return jsonify(ok=False, message=message), 403
+allowed, message = location_allowed(latitude, longitude)
+if not allowed:
+    session["location_verified"] = False
+    return jsonify(ok=False, message=message), 403
 
-    session["location_verified"] = True
-    session["location_verified_at"] = now_ist().isoformat()
-    return jsonify(ok=True, message=message)
+session["location_verified"] = True
+session["location_verified_at"] = now_ist().isoformat()
+return jsonify(ok=True, message=message)
 
+============================================================
 
-# ============================================================
-# ADMIN LOGIN
-# ============================================================
+ADMIN LOGIN
+
+============================================================
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "")
+if request.method == "POST":
+username = request.form.get("username", "").strip()
+password = request.form.get("password", "")
 
-        user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=username).first()
 
-        if user and check_password_hash(
-            user.password_hash,
-            password
-        ):
-            # Teachers are single-session accounts. A second login is refused
-            # until the existing teacher session explicitly logs out.
-            if not user.is_admin and user.active_session_token:
-                flash("This teacher account is already logged in on another device/browser. Please logout there first.")
-                return redirect(url_for("login"))
+    if user and check_password_hash(
+        user.password_hash,
+        password
+    ):
+        # Teachers are single-session accounts. A second login is refused
+        # until the existing teacher session explicitly logs out.
+        if not user.is_admin and user.active_session_token:
+            flash("This teacher account is already logged in on another device/browser. Please logout there first.")
+            return redirect(url_for("login"))
 
-            session.clear()
-            session["user_id"] = user.id
+        session.clear()
+        session["user_id"] = user.id
 
-            if not user.is_admin:
-                user.active_session_token = uuid.uuid4().hex
-                db.session.commit()
-                session["active_session_token"] = user.active_session_token
-                session["location_verified"] = False
+        if not user.is_admin:
+            user.active_session_token = uuid.uuid4().hex
+            db.session.commit()
+            session["active_session_token"] = user.active_session_token
+            session["location_verified"] = False
 
-                # Every teacher login must pass the GPS check before attendance.
-                return redirect(url_for("teacher_location"))
+            # Every teacher login must pass the GPS check before attendance.
+            return redirect(url_for("teacher_location"))
 
-            next_url = request.args.get("next")
+        next_url = request.args.get("next")
 
-            if next_url and next_url.startswith("/"):
-                return redirect(next_url)
+        if next_url and next_url.startswith("/"):
+            return redirect(next_url)
 
-            return redirect(url_for("home"))
+        return redirect(url_for("home"))
 
-        flash("Invalid username or password.")
+    flash("Invalid username or password.")
 
-    content = r"""
+content = r"""
+
 <div class="login-box">
     <h1>🔐 Admin Login</h1>
 
-    <p>
-        Login is required for attendance, reports and timetable management.
-    </p>
+<p>
+    Login is required for attendance, reports and timetable management.
+</p>
 
-    <form method="post">
-        <label>Username</label>
-        <input name="username" required autocomplete="username">
+<form method="post">
+    <label>Username</label>
+    <input name="username" required autocomplete="username">
 
-        <br><br>
+    <br><br>
 
-        <label>Password</label>
-        <input type="password" name="password" required autocomplete="current-password">
+    <label>Password</label>
+    <input type="password" name="password" required autocomplete="current-password">
 
-        <br><br>
+    <br><br>
 
-        <button class="btn btn-blue" type="submit">
-            Login
-        </button>
-    </form>
+    <button class="btn btn-blue" type="submit">
+        Login
+    </button>
+</form>
 
-    <br>
+<br>
 
-    <p style="font-size:12px;color:#667085;">
-        Students and visitors can view the timetable and live lecture
-        without administrative access.
-    </p>
+<p style="font-size:12px;color:#667085;">
+    Students and visitors can view the timetable and live lecture
+    without administrative access.
+</p>
+
 </div>
 """
 
-    return render_page(
-        content,
-        page_title="Admin Login"
-    )
-
+return render_page(
+    content,
+    page_title="Admin Login"
+)
 
 @app.route("/logout")
 def logout():
-    user_id = session.get("user_id")
-    if user_id:
-        user = db.session.get(User, user_id)
-        if user and not user.is_admin:
-            user.active_session_token = None
-            db.session.commit()
-    session.clear()
-    return redirect(url_for("home"))
+user_id = session.get("user_id")
+if user_id:
+user = db.session.get(User, user_id)
+if user and not user.is_admin:
+user.active_session_token = None
+db.session.commit()
+session.clear()
+return redirect(url_for("home"))
 
+============================================================
 
-# ============================================================
-# ATTENDANCE PERMISSION HELPERS
-# ============================================================
+ATTENDANCE PERMISSION HELPERS
+
+============================================================
 
 def normalize_subject(value):
-    """Normalize subject names for teacher access control.
+"""Normalize subject names for teacher access control.
 
-    Teacher accounts use short subjects (comp sci, math, micro), while the
-    timetable may contain labels such as Computer Science-B-13,
-    Practical: Physics, SEC: Physics, Major: Computer Science-B-13,
-    Chemistry-B-14, Mathematics-B-17 and Microbiology-B-7.
-    """
-    import re
+Teacher accounts use short subjects (comp sci, math, micro), while the
+timetable may contain labels such as Computer Science-B-13,
+Practical: Physics, SEC: Physics, Major: Computer Science-B-13,
+Chemistry-B-14, Mathematics-B-17 and Microbiology-B-7.
+"""
+import re
 
-    text = str(value or "").strip().lower()
-    text = re.sub(r"\s+", " ", text)
+text = str(value or "").strip().lower()
+text = re.sub(r"\s+", " ", text)
 
-    # Remove timetable category/paper prefixes.
-    text = re.sub(
-        r"^(major|minor|elective|vc|sl|practical|practicals|sec|aec|vac|ge|oe|compulsory|optional)\s*:\s*",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    )
+# Remove timetable category/paper prefixes.
+text = re.sub(
+    r"^(major|minor|elective|vc|sl|practical|practicals|sec|aec|vac|ge|oe|compulsory|optional)\s*:\s*",
+    "",
+    text,
+    flags=re.IGNORECASE,
+)
 
-    # Also support prefixes without a colon.
-    text = re.sub(
-        r"^(practical|practicals|sec|aec|vac|ge|oe|major|minor)\s+",
-        "",
-        text,
-        flags=re.IGNORECASE,
-    )
+# Also support prefixes without a colon.
+text = re.sub(
+    r"^(practical|practicals|sec|aec|vac|ge|oe|major|minor)\s+",
+    "",
+    text,
+    flags=re.IGNORECASE,
+)
 
-    # Remove common class/room suffixes, e.g. -B-13 / B-13 / -B-7.
-    text = re.sub(r"\s*[-/]?\s*b\s*[-/]?\s*\d+\s*$", "", text)
-    text = re.sub(r"\s*[-/]?\s*dept\s*$", "", text)
-    text = text.strip(" -:/")
+# Remove common class/room suffixes, e.g. -B-13 / B-13 / -B-7.
+text = re.sub(r"\s*[-/]?\s*b\s*[-/]?\s*\d+\s*$", "", text)
+text = re.sub(r"\s*[-/]?\s*dept\s*$", "", text)
+text = text.strip(" -:/")
 
-    aliases = {
-        "comp sci": "computer science",
-        "computer sci": "computer science",
-        "computer science": "computer science",
-        "cs": "computer science",
-        "physics": "physics",
-        "phys": "physics",
-        "chem": "chemistry",
-        "chemistry": "chemistry",
-        "math": "mathematics",
-        "maths": "mathematics",
-        "mathematics": "mathematics",
-        "micro": "microbiology",
-        "microbio": "microbiology",
-        "microbiology": "microbiology",
-    }
+aliases = {
+    "comp sci": "computer science",
+    "computer sci": "computer science",
+    "computer science": "computer science",
+    "cs": "computer science",
+    "physics": "physics",
+    "phys": "physics",
+    "chem": "chemistry",
+    "chemistry": "chemistry",
+    "math": "mathematics",
+    "maths": "mathematics",
+    "mathematics": "mathematics",
+    "micro": "microbiology",
+    "microbio": "microbiology",
+    "microbiology": "microbiology",
+}
 
-    if text in aliases:
-        return aliases[text]
+if text in aliases:
+    return aliases[text]
 
-    # Handle labels that still contain extra text around the subject.
-    if "computer science" in text or "comp sci" in text:
-        return "computer science"
-    if "microbiology" in text or "microbio" in text:
-        return "microbiology"
-    if "physics" in text:
-        return "physics"
-    if "chemistry" in text or text.startswith("chem"):
-        return "chemistry"
-    if "mathematics" in text or text == "math" or text.startswith("math"):
-        return "mathematics"
+# Handle labels that still contain extra text around the subject.
+if "computer science" in text or "comp sci" in text:
+    return "computer science"
+if "microbiology" in text or "microbio" in text:
+    return "microbiology"
+if "physics" in text:
+    return "physics"
+if "chemistry" in text or text.startswith("chem"):
+    return "chemistry"
+if "mathematics" in text or text == "math" or text.startswith("math"):
+    return "mathematics"
 
-    return text
-
+return text
 
 def normalize_teacher_name(value):
-    """Normalize teacher names while ignoring dots/spacing/case."""
-    import re
-    text = str(value or "").strip().lower()
-    return re.sub(r"[^a-z0-9]", "", text)
-
+"""Normalize teacher names while ignoring dots/spacing/case."""
+import re
+text = str(value or "").strip().lower()
+return re.sub(r"[^a-z0-9]", "", text)
 
 def can_mark_subject(user, subject):
-    if not user:
-        return False
-    if user.is_admin:
-        return True
-    return normalize_subject(user.assigned_subject) == normalize_subject(subject)
-
+if not user:
+return False
+if user.is_admin:
+return True
+return normalize_subject(user.assigned_subject) == normalize_subject(subject)
 
 def can_mark_lecture(user, subject, lecture_teacher):
-    """Attendance permission for the five assigned teachers.
+"""Attendance permission for the five assigned teachers.
 
-    Admin can mark everything. A teacher must match their assigned subject.
-    If the timetable has a teacher name, it must also match the logged-in
-    teacher. If the timetable teacher field is blank (as in the original
-    timetable data), subject matching is used so valid teacher accounts are
-    not incorrectly locked out.
-    """
-    if not user:
-        return False
-    if user.is_admin:
-        return True
+Admin can mark everything. A teacher must match their assigned subject.
+If the timetable has a teacher name, it must also match the logged-in
+teacher. If the timetable teacher field is blank (as in the original
+timetable data), subject matching is used so valid teacher accounts are
+not incorrectly locked out.
+"""
+if not user:
+    return False
+if user.is_admin:
+    return True
 
-    assigned_ok = (
-        normalize_subject(user.assigned_subject) == normalize_subject(subject)
-    )
-    if not assigned_ok:
-        return False
+assigned_ok = (
+    normalize_subject(user.assigned_subject) == normalize_subject(subject)
+)
+if not assigned_ok:
+    return False
 
-    timetable_teacher = str(lecture_teacher or "").strip()
-    if not timetable_teacher:
-        return True
+timetable_teacher = str(lecture_teacher or "").strip()
+if not timetable_teacher:
+    return True
 
-    return normalize_teacher_name(user.name) == normalize_teacher_name(timetable_teacher)
-
+return normalize_teacher_name(user.name) == normalize_teacher_name(timetable_teacher)
 
 def attendance_access_required(view):
-    @wraps(view)
-    def wrapped(*args, **kwargs):
-        user = current_user()
+@wraps(view)
+def wrapped(*args, **kwargs):
+user = current_user()
 
-        if not user:
-            return redirect(url_for("login", next=request.full_path))
+    if not user:
+        return redirect(url_for("login", next=request.full_path))
 
-        if not user.is_admin and not user.assigned_subject:
-            flash("Attendance access is not assigned to this account.")
-            return redirect(url_for("home"))
+    if not user.is_admin and not user.assigned_subject:
+        flash("Attendance access is not assigned to this account.")
+        return redirect(url_for("home"))
 
-        if not user.is_admin and not session.get("location_verified"):
-            return redirect(url_for("teacher_location", next=request.full_path))
+    if not user.is_admin and not session.get("location_verified"):
+        return redirect(url_for("teacher_location", next=request.full_path))
 
-        return view(*args, **kwargs)
-    return wrapped
+    return view(*args, **kwargs)
+return wrapped
 
+============================================================
 
-# ============================================================
-# ATTENDANCE PAGE
-# ============================================================
+ATTENDANCE PAGE
+
+============================================================
 
 @app.route("/attendance")
 @attendance_access_required
 def attendance():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        faculties[0] if faculties else ""
-    )
+faculty = request.args.get(
+    "faculty",
+    faculties[0] if faculties else ""
+)
 
-    years = years_for_faculty(faculty)
+years = years_for_faculty(faculty)
 
-    year = request.args.get(
-        "year",
-        years[0] if years else ""
-    )
+year = request.args.get(
+    "year",
+    years[0] if years else ""
+)
 
-    day = request.args.get(
-        "day",
-        now_ist().strftime("%A")
-    )
+day = request.args.get(
+    "day",
+    now_ist().strftime("%A")
+)
 
-    record_date_text = request.args.get(
-        "record_date",
-        today_ist().isoformat()
-    )
+record_date_text = request.args.get(
+    "record_date",
+    today_ist().isoformat()
+)
 
-    try:
-        record_date = datetime.strptime(
-            record_date_text,
-            "%Y-%m-%d"
-        ).date()
-    except Exception:
-        record_date = today_ist()
-        record_date_text = record_date.isoformat()
+try:
+    record_date = datetime.strptime(
+        record_date_text,
+        "%Y-%m-%d"
+    ).date()
+except Exception:
+    record_date = today_ist()
+    record_date_text = record_date.isoformat()
 
-    if day not in DAYS:
-        day = "Monday"
+if day not in DAYS:
+    day = "Monday"
 
-    rows = get_day_lectures(
-        faculty,
-        year,
-        day
-    )
+rows = get_day_lectures(
+    faculty,
+    year,
+    day
+)
 
-    content = r"""
+content = r"""
+
 <div class="hero">
     <h1>📝 Attendance Management</h1>
     <p>Secure lecture attendance — teachers can mark only their own subject and timetable lecture</p>
@@ -3709,49 +3698,50 @@ def attendance():
 <form class="filters" method="get">
     <div class="filter-grid">
 
-        <div>
-            <label>Faculty</label>
-            <select name="faculty" onchange="this.form.submit()">
-                {% for f in faculties %}
-                    <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
-                        {{ f }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Year</label>
-            <select name="year" onchange="this.form.submit()">
-                {% for y in years %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>
-                        {{ y }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Day</label>
-            <select name="day" onchange="this.form.submit()">
-                {% for d in days %}
-                    <option value="{{ d }}" {% if d == day %}selected{% endif %}>
-                        {{ d }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Attendance Date</label>
-            <input
-                type="date"
-                name="record_date"
-                value="{{ record_date_text }}"
-                onchange="this.form.submit()"
-            >
-        </div>
+    <div>
+        <label>Faculty</label>
+        <select name="faculty" onchange="this.form.submit()">
+            {% for f in faculties %}
+                <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
+                    {{ f }}
+                </option>
+            {% endfor %}
+        </select>
     </div>
+
+    <div>
+        <label>Year</label>
+        <select name="year" onchange="this.form.submit()">
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>
+                    {{ y }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Day</label>
+        <select name="day" onchange="this.form.submit()">
+            {% for d in days %}
+                <option value="{{ d }}" {% if d == day %}selected{% endif %}>
+                    {{ d }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Attendance Date</label>
+        <input
+            type="date"
+            name="record_date"
+            value="{{ record_date_text }}"
+            onchange="this.form.submit()"
+        >
+    </div>
+</div>
+
 </form>
 
 <div class="section">
@@ -3760,401 +3750,398 @@ def attendance():
             {{ day }} • {{ record_date_text }}
         </h2>
 
-        <div class="action-row">
-            <a class="btn btn-blue" href="{{ url_for('reports', faculty=faculty, year=year) }}">
-                View Reports
-            </a>
-            {% if current_user_obj and current_user_obj.is_admin %}
-                <a class="btn btn-purple" href="{{ url_for('attendance_import') }}">
-                    📥 Import CSV
-                </a>
-            {% endif %}
-        </div>
-    </div>
+    <a class="btn btn-blue" href="{{ url_for('reports', faculty=faculty, year=year) }}">
+        View Reports
+    </a>
+</div>
 
-    {% if rows %}
-        {% for row in rows %}
-            {% set status = attendance_status_for(
-                record_date,
-                row.faculty,
-                row.year,
-                row.day,
-                row.slot,
-                row.subject,
-                row.class_name or ""
-            ) %}
+{% if rows %}
+    {% for row in rows %}
+        {% set status = attendance_status_for(
+            record_date,
+            row.faculty,
+            row.year,
+            row.day,
+            row.slot,
+            row.subject,
+            row.class_name or ""
+        ) %}
 
-            {% set lecture_active = attendance_window_open(
-                record_date, row.day, row.slot
-            ) %}
+        {% set lecture_active = attendance_window_open(
+            record_date, row.day, row.slot
+        ) %}
 
-            <div class="lecture">
-                <div class="time">
-                    {{ row.slot }}
-                </div>
-
-                <div class="subject">
-                    {{ row.subject }}
-
-                    <div class="meta">
-                        {{ row.faculty }} • {{ row.year }}
-                        {% if row.class_name %} • {{ row.class_name }}{% endif %}
-                        {% if row.teacher %} • {{ row.teacher }}{% endif %}
-                    </div>
-
-                    <div style="margin-top:7px;">
-                        {% if status == "taken" %}
-                            <span class="badge badge-taken">✓ TAKEN</span>
-                        {% elif status == "not_taken" %}
-                            <span class="badge badge-not">✕ NOT TAKEN</span>
-                        {% elif status == "cancelled" %}
-                            <span class="badge badge-cancel">CANCELLED</span>
-                        {% else %}
-                            <span class="badge badge-none">NOT MARKED</span>
-                        {% endif %}
-                    </div>
-
-                    {% set existing_record = attendance_record_for(
-                        record_date, row.faculty, row.year, row.day,
-                        row.slot, row.subject, row.class_name or ""
-                    ) %}
-                    {% if existing_record %}
-                        <div class="meta" style="margin-top:7px; font-weight:800;">
-                            👥 Present Students: {{ existing_record.present_count }}
-                        </div>
-                    {% endif %}
-                </div>
-
-                <div class="action-row">
-                    {% if status %}
-                        <span class="attendance-locked">🔒 Attendance locked — cannot be changed</span>
-                    {% elif not can_mark_lecture(current_user_obj, row.subject, row.teacher or '') %}
-                        <span class="attendance-disabled">🔐 Only the assigned teacher for this subject can mark this attendance</span>
-                    {% elif lecture_active %}
-                        <form class="attendance-form" method="post" action="{{ url_for('mark_attendance') }}" onsubmit="return prepareAttendanceForm(this, event.submitter);">
-                            <input type="hidden" name="record_date" value="{{ record_date_text }}">
-                            <input type="hidden" name="faculty" value="{{ row.faculty }}">
-                            <input type="hidden" name="year" value="{{ row.year }}">
-                            <input type="hidden" name="day" value="{{ row.day }}">
-                            <input type="hidden" name="slot" value="{{ row.slot }}">
-                            <input type="hidden" name="subject" value="{{ row.subject }}">
-                            <input type="hidden" name="class_name" value="{{ row.class_name or '' }}">
-                            <input type="hidden" name="teacher" value="{{ row.teacher or '' }}">
-
-                            <div style="min-width:190px; margin-bottom:8px;">
-                                <label>Present Students</label>
-                                <input
-                                    type="number"
-                                    name="present_count"
-                                    min="0"
-                                    step="1"
-                                    required
-                                    placeholder="e.g. 52"
-                                >
-                            </div>
-
-                            <button class="btn btn-green btn-small" name="status" value="taken">
-                                ✓ Taken
-                            </button>
-
-                            <button class="btn btn-red btn-small" name="status" value="not_taken">
-                                ✕ Not Taken
-                            </button>
-
-                            <button class="btn btn-orange btn-small" name="status" value="cancelled">
-                                Cancelled
-                            </button>
-                        </form>
-                    {% else %}
-                        <span class="attendance-disabled">⏱️ Marking is available only during this lecture</span>
-                    {% endif %}
-                </div>
+        <div class="lecture">
+            <div class="time">
+                {{ row.slot }}
             </div>
-        {% endfor %}
-    {% else %}
-        <div class="empty">No lectures scheduled.</div>
-    {% endif %}
+
+            <div class="subject">
+                {{ row.subject }}
+
+                <div class="meta">
+                    {{ row.faculty }} • {{ row.year }}
+                    {% if row.class_name %} • {{ row.class_name }}{% endif %}
+                    {% if row.teacher %} • {{ row.teacher }}{% endif %}
+                </div>
+
+                <div style="margin-top:7px;">
+                    {% if status == "taken" %}
+                        <span class="badge badge-taken">✓ TAKEN</span>
+                    {% elif status == "not_taken" %}
+                        <span class="badge badge-not">✕ NOT TAKEN</span>
+                    {% elif status == "cancelled" %}
+                        <span class="badge badge-cancel">CANCELLED</span>
+                    {% else %}
+                        <span class="badge badge-none">NOT MARKED</span>
+                    {% endif %}
+                </div>
+
+                {% set existing_record = attendance_record_for(
+                    record_date, row.faculty, row.year, row.day,
+                    row.slot, row.subject, row.class_name or ""
+                ) %}
+                {% if existing_record %}
+                    <div class="meta" style="margin-top:7px; font-weight:800;">
+                        👥 Present Students: {{ existing_record.present_count }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="action-row">
+                {% if status %}
+                    <span class="attendance-locked">🔒 Attendance locked — cannot be changed</span>
+                {% elif not can_mark_lecture(current_user_obj, row.subject, row.teacher or '') %}
+                    <span class="attendance-disabled">🔐 Only the assigned teacher for this subject can mark this attendance</span>
+                {% elif lecture_active %}
+                    <form class="attendance-form" method="post" action="{{ url_for('mark_attendance') }}" onsubmit="return prepareAttendanceForm(this, event.submitter);">
+                        <input type="hidden" name="record_date" value="{{ record_date_text }}">
+                        <input type="hidden" name="faculty" value="{{ row.faculty }}">
+                        <input type="hidden" name="year" value="{{ row.year }}">
+                        <input type="hidden" name="day" value="{{ row.day }}">
+                        <input type="hidden" name="slot" value="{{ row.slot }}">
+                        <input type="hidden" name="subject" value="{{ row.subject }}">
+                        <input type="hidden" name="class_name" value="{{ row.class_name or '' }}">
+                        <input type="hidden" name="teacher" value="{{ row.teacher or '' }}">
+
+                        <div style="min-width:190px; margin-bottom:8px;">
+                            <label>Present Students</label>
+                            <input
+                                type="number"
+                                name="present_count"
+                                min="0"
+                                step="1"
+                                required
+                                placeholder="e.g. 52"
+                            >
+                        </div>
+
+                        <button class="btn btn-green btn-small" name="status" value="taken">
+                            ✓ Taken
+                        </button>
+
+                        <button class="btn btn-red btn-small" name="status" value="not_taken">
+                            ✕ Not Taken
+                        </button>
+
+                        <button class="btn btn-orange btn-small" name="status" value="cancelled">
+                            Cancelled
+                        </button>
+                    </form>
+                {% else %}
+                    <span class="attendance-disabled">⏱️ Marking is available only during this lecture</span>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty">No lectures scheduled.</div>
+{% endif %}
+
 </div>
 """
 
-    return render_page(
-        content,
-        faculties=faculties,
-        years=years,
-        faculty=faculty,
-        year=year,
-        day=day,
-        days=DAYS,
-        rows=rows,
-        record_date=record_date,
-        record_date_text=record_date_text,
-        attendance_status_for=attendance_status_for,
-        attendance_record_for=attendance_record_for,
-        attendance_window_open=attendance_window_open,
-        current_user_obj=current_user(),
-        can_mark_subject=can_mark_subject,
-        can_mark_lecture=can_mark_lecture,
-        college_location_configured=(get_college_location() is not None),
-        college_radius=(get_college_location().radius_meters if get_college_location() else 150),
-        page_title="Attendance"
-    )
+return render_page(
+    content,
+    faculties=faculties,
+    years=years,
+    faculty=faculty,
+    year=year,
+    day=day,
+    days=DAYS,
+    rows=rows,
+    record_date=record_date,
+    record_date_text=record_date_text,
+    attendance_status_for=attendance_status_for,
+    attendance_record_for=attendance_record_for,
+    attendance_window_open=attendance_window_open,
+    current_user_obj=current_user(),
+    can_mark_subject=can_mark_subject,
+    can_mark_lecture=can_mark_lecture,
+    college_location_configured=(get_college_location() is not None),
+    college_radius=(get_college_location().radius_meters if get_college_location() else 150),
+    page_title="Attendance"
+)
 
+============================================================
 
-# ============================================================
-# MARK / EDIT ATTENDANCE
-# ============================================================
+MARK / EDIT ATTENDANCE
+
+============================================================
 
 @app.route("/attendance/mark", methods=["POST"])
 @attendance_access_required
 def mark_attendance():
-    try:
-        record_date = datetime.strptime(
-            request.form.get("record_date", ""),
-            "%Y-%m-%d"
-        ).date()
-    except Exception:
-        flash("Invalid attendance date.")
-        return redirect(url_for("attendance"))
+try:
+record_date = datetime.strptime(
+request.form.get("record_date", ""),
+"%Y-%m-%d"
+).date()
+except Exception:
+flash("Invalid attendance date.")
+return redirect(url_for("attendance"))
 
-    faculty = request.form.get("faculty", "").strip()
-    year = request.form.get("year", "").strip()
-    day = request.form.get("day", "").strip()
-    slot = request.form.get("slot", "").strip()
-    subject = request.form.get("subject", "").strip()
-    class_name = request.form.get("class_name", "").strip()
-    teacher = request.form.get("teacher", "").strip()
-    status = request.form.get("status", "").strip()
-    latitude = request.form.get("latitude", "").strip()
-    longitude = request.form.get("longitude", "").strip()
+faculty = request.form.get("faculty", "").strip()
+year = request.form.get("year", "").strip()
+day = request.form.get("day", "").strip()
+slot = request.form.get("slot", "").strip()
+subject = request.form.get("subject", "").strip()
+class_name = request.form.get("class_name", "").strip()
+teacher = request.form.get("teacher", "").strip()
+status = request.form.get("status", "").strip()
+latitude = request.form.get("latitude", "").strip()
+longitude = request.form.get("longitude", "").strip()
 
-    try:
-        present_count = int(request.form.get("present_count", ""))
-    except (TypeError, ValueError):
-        flash("Please enter a valid present student number.")
-        return redirect(url_for(
-            "attendance", faculty=faculty, year=year, day=day,
-            record_date=record_date.isoformat()
-        ))
+try:
+    present_count = int(request.form.get("present_count", ""))
+except (TypeError, ValueError):
+    flash("Please enter a valid present student number.")
+    return redirect(url_for(
+        "attendance", faculty=faculty, year=year, day=day,
+        record_date=record_date.isoformat()
+    ))
 
-    if present_count < 0:
-        flash("Present student number cannot be negative.")
-        return redirect(url_for(
-            "attendance", faculty=faculty, year=year, day=day,
-            record_date=record_date.isoformat()
-        ))
+if present_count < 0:
+    flash("Present student number cannot be negative.")
+    return redirect(url_for(
+        "attendance", faculty=faculty, year=year, day=day,
+        record_date=record_date.isoformat()
+    ))
 
-    if not all([faculty, year, day, slot, subject]):
-        flash("Incomplete lecture information.")
-        return redirect(url_for("attendance"))
+if not all([faculty, year, day, slot, subject]):
+    flash("Incomplete lecture information.")
+    return redirect(url_for("attendance"))
 
-    if day not in DAYS:
-        flash("Invalid day.")
-        return redirect(url_for("attendance"))
+if day not in DAYS:
+    flash("Invalid day.")
+    return redirect(url_for("attendance"))
 
-    user = current_user()
+user = current_user()
 
-    # First verify that the submitted lecture actually exists in the timetable.
-    # This prevents a teacher from crafting a fake slot/lecture in the browser.
+# First verify that the submitted lecture actually exists in the timetable.
+# This prevents a teacher from crafting a fake slot/lecture in the browser.
+lecture = Timetable.query.filter_by(
+    faculty=faculty,
+    year=year,
+    day=day,
+    slot=slot,
+    subject=subject,
+    class_name=class_name or None
+).first()
+
+if not lecture:
+    # Some old timetable rows may have an empty class_name stored as an
+    # empty string instead of NULL, so retry without class_name.
     lecture = Timetable.query.filter_by(
         faculty=faculty,
         year=year,
         day=day,
         slot=slot,
-        subject=subject,
-        class_name=class_name or None
+        subject=subject
     ).first()
 
-    if not lecture:
-        # Some old timetable rows may have an empty class_name stored as an
-        # empty string instead of NULL, so retry without class_name.
-        lecture = Timetable.query.filter_by(
-            faculty=faculty,
-            year=year,
-            day=day,
-            slot=slot,
-            subject=subject
-        ).first()
+if not lecture:
+    flash("This lecture does not exist in the timetable.")
+    return redirect(url_for(
+        "attendance", faculty=faculty, year=year, day=day,
+        record_date=record_date.isoformat()
+    ))
 
-    if not lecture:
-        flash("This lecture does not exist in the timetable.")
+if not class_name:
+    class_name = lecture.class_name or ""
+if not teacher:
+    teacher = lecture.teacher or ""
+
+# Strict server-side enforcement: non-admin teachers must match BOTH
+# the assigned subject and the teacher name on this exact timetable row.
+if not can_mark_lecture(user, lecture.subject, lecture.teacher or ""):
+    flash("You can mark attendance only for your own assigned subject and lecture.")
+    return redirect(url_for(
+        "attendance", faculty=faculty, year=year, day=day,
+        record_date=record_date.isoformat()
+    ))
+
+# Teachers must prove they are physically inside the configured college
+# geofence. The administrator is exempt so they can manage the system.
+if not user.is_admin:
+    allowed, location_message = location_allowed(latitude, longitude)
+    if not allowed:
+        flash("📍 " + location_message)
         return redirect(url_for(
             "attendance", faculty=faculty, year=year, day=day,
             record_date=record_date.isoformat()
         ))
 
-    if not class_name:
-        class_name = lecture.class_name or ""
-    if not teacher:
-        teacher = lecture.teacher or ""
+record = attendance_record_for(
+    record_date,
+    faculty,
+    year,
+    day,
+    slot,
+    subject,
+    class_name
+)
 
-    # Strict server-side enforcement: non-admin teachers must match BOTH
-    # the assigned subject and the teacher name on this exact timetable row.
-    if not can_mark_lecture(user, lecture.subject, lecture.teacher or ""):
-        flash("You can mark attendance only for your own assigned subject and lecture.")
-        return redirect(url_for(
-            "attendance", faculty=faculty, year=year, day=day,
-            record_date=record_date.isoformat()
-        ))
+# Once attendance is saved, it is permanently locked.
+if record:
+    flash("Attendance is already marked and cannot be changed.")
 
-    # Teachers must prove they are physically inside the configured college
-    # geofence. The administrator is exempt so they can manage the system.
-    if not user.is_admin:
-        allowed, location_message = location_allowed(latitude, longitude)
-        if not allowed:
-            flash("📍 " + location_message)
-            return redirect(url_for(
-                "attendance", faculty=faculty, year=year, day=day,
-                record_date=record_date.isoformat()
-            ))
+# Attendance can only be marked while the lecture is running today.
+elif not attendance_window_open(record_date, day, slot):
+    flash("Attendance can only be marked during the scheduled lecture time.")
 
-    record = attendance_record_for(
-        record_date,
-        faculty,
-        year,
-        day,
-        slot,
-        subject,
-        class_name
+elif status in VALID_STATUSES:
+    record = Attendance(
+        record_date=record_date,
+        faculty=faculty,
+        year=year,
+        class_name=class_name,
+        day=day,
+        slot=slot,
+        subject=subject,
+        teacher=teacher,
+        status=status,
+        present_count=present_count,
+        marked_by_user_id=user.id,
+        marked_by=user.name,
+        marked_at=now_ist_naive()
+    )
+    db.session.add(record)
+    db.session.commit()
+
+    flash(
+        f"{subject} — {VALID_STATUSES[status]} "
+        f"for {record_date.strftime('%d-%m-%Y')}. Attendance is now locked."
     )
 
-    # Once attendance is saved, it is permanently locked.
-    if record:
-        flash("Attendance is already marked and cannot be changed.")
+else:
+    flash("Invalid attendance status.")
 
-    # Attendance can only be marked while the lecture is running today.
-    elif not attendance_window_open(record_date, day, slot):
-        flash("Attendance can only be marked during the scheduled lecture time.")
-
-    elif status in VALID_STATUSES:
-        record = Attendance(
-            record_date=record_date,
-            faculty=faculty,
-            year=year,
-            class_name=class_name,
-            day=day,
-            slot=slot,
-            subject=subject,
-            teacher=teacher,
-            status=status,
-            present_count=present_count,
-            marked_by_user_id=user.id,
-            marked_by=user.name,
-            marked_at=now_ist_naive()
-        )
-        db.session.add(record)
-        db.session.commit()
-
-        flash(
-            f"{subject} — {VALID_STATUSES[status]} "
-            f"for {record_date.strftime('%d-%m-%Y')}. Attendance is now locked."
-        )
-
-    else:
-        flash("Invalid attendance status.")
-
-    return redirect(
-        url_for(
-            "attendance",
-            faculty=faculty,
-            year=year,
-            day=day,
-            record_date=record_date.isoformat()
-        )
+return redirect(
+    url_for(
+        "attendance",
+        faculty=faculty,
+        year=year,
+        day=day,
+        record_date=record_date.isoformat()
     )
+)
 
+============================================================
 
-# ============================================================
-# REPORTS
-# ============================================================
+REPORTS
+
+============================================================
 
 @app.route("/reports")
 @admin_required
 def reports():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        faculties[0] if faculties else ""
-    )
+faculty = request.args.get(
+    "faculty",
+    faculties[0] if faculties else ""
+)
 
-    years = years_for_faculty(faculty)
+years = years_for_faculty(faculty)
 
-    year = request.args.get(
-        "year",
-        years[0] if years else ""
-    )
+year = request.args.get(
+    "year",
+    years[0] if years else ""
+)
 
-    class_name = request.args.get(
-        "class_name",
-        ""
-    ).strip()
+class_name = request.args.get(
+    "class_name",
+    ""
+).strip()
 
-    period = request.args.get(
-        "period",
-        "month"
-    )
+period = request.args.get(
+    "period",
+    "month"
+)
 
-    subject = request.args.get(
-        "subject",
-        ""
-    ).strip()
+subject = request.args.get(
+    "subject",
+    ""
+).strip()
 
-    slot = request.args.get(
-        "slot",
-        ""
-    ).strip()
+slot = request.args.get(
+    "slot",
+    ""
+).strip()
 
-    status = request.args.get(
-        "status",
-        ""
-    ).strip()
+status = request.args.get(
+    "status",
+    ""
+).strip()
 
-    custom_start = request.args.get(
-        "start_date",
-        ""
-    )
+custom_start = request.args.get(
+    "start_date",
+    ""
+)
 
-    custom_end = request.args.get(
-        "end_date",
-        ""
-    )
+custom_end = request.args.get(
+    "end_date",
+    ""
+)
 
-    start_date, end_date = period_dates(
-        period,
-        custom_start,
-        custom_end
-    )
+start_date, end_date = period_dates(
+    period,
+    custom_start,
+    custom_end
+)
 
-    records = attendance_query(
-        faculty=faculty,
-        year=year,
-        class_name=class_name,
-        start_date=start_date,
-        end_date=end_date,
-        subject=subject,
-        slot=slot,
-        status=status
-    ).all()
+records = attendance_query(
+    faculty=faculty,
+    year=year,
+    class_name=class_name,
+    start_date=start_date,
+    end_date=end_date,
+    subject=subject,
+    slot=slot,
+    status=status
+).all()
 
-    stats = attendance_stats(records)
-    subject_stats = subject_statistics(records)
+stats = attendance_stats(records)
+subject_stats = subject_statistics(records)
 
-    classes = classes_for_filters(
-        faculty,
-        year
-    )
+classes = classes_for_filters(
+    faculty,
+    year
+)
 
-    subjects = subjects_for_filters(
-        faculty,
-        year
-    )
+subjects = subjects_for_filters(
+    faculty,
+    year
+)
 
-    slots = slots_for_filters(
-        faculty,
-        year
-    )
+slots = slots_for_filters(
+    faculty,
+    year
+)
 
-    content = r"""
+content = r"""
+
 <div class="hero">
     <h1>📊 Attendance Reports</h1>
     <p>Retrieve permanently saved attendance records at any time</p>
@@ -4163,141 +4150,135 @@ def reports():
 <form class="filters" method="get">
     <div class="filter-grid">
 
-        <div>
-            <label>Faculty</label>
-            <select name="faculty">
-                {% for f in faculties %}
-                    <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
-                        {{ f }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Year</label>
-            <select name="year">
-                {% for y in years %}
-                    <option value="{{ y }}" {% if y == year %}selected{% endif %}>
-                        {{ y }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Class</label>
-            <select name="class_name">
-                <option value="">All Classes</option>
-                {% for c in classes %}
-                    <option value="{{ c }}" {% if c == class_name %}selected{% endif %}>
-                        {{ c }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Period</label>
-            <select name="period">
-                <option value="today" {% if period == "today" %}selected{% endif %}>Today</option>
-                <option value="week" {% if period == "week" %}selected{% endif %}>This Week</option>
-                <option value="month" {% if period == "month" %}selected{% endif %}>This Month</option>
-                <option value="year" {% if period == "year" %}selected{% endif %}>This Year</option>
-                <option value="custom" {% if period == "custom" %}selected{% endif %}>Custom Date Range</option>
-            </select>
-        </div>
-
-        <div>
-            <label>Subject</label>
-            <select name="subject">
-                <option value="">All Subjects</option>
-                {% for s in subjects %}
-                    <option value="{{ s }}" {% if s == subject %}selected{% endif %}>
-                        {{ s }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Lecture / Time</label>
-            <select name="slot">
-                <option value="">All Lectures</option>
-                {% for s in slots %}
-                    <option value="{{ s }}" {% if s == slot %}selected{% endif %}>
-                        {{ s }}
-                    </option>
-                {% endfor %}
-            </select>
-        </div>
-
-        <div>
-            <label>Status</label>
-            <select name="status">
-                <option value="">All Statuses</option>
-                <option value="taken" {% if status == "taken" %}selected{% endif %}>Taken</option>
-                <option value="not_taken" {% if status == "not_taken" %}selected{% endif %}>Not Taken</option>
-                <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>Cancelled</option>
-            </select>
-        </div>
-
-        <div>
-            <label>Start Date</label>
-            <input type="date" name="start_date" value="{{ custom_start }}">
-        </div>
-
-        <div>
-            <label>End Date</label>
-            <input type="date" name="end_date" value="{{ custom_end }}">
-        </div>
-
-        <div>
-            <label>&nbsp;</label>
-            <button class="btn btn-blue" type="submit">
-                Generate Report
-            </button>
-        </div>
-
-        <div>
-            <label>&nbsp;</label>
-            <a
-                class="btn btn-green"
-                href="{{ url_for(
-                    'export_csv',
-                    faculty=faculty,
-                    year=year,
-                    class_name=class_name,
-                    period=period,
-                    subject=subject,
-                    slot=slot,
-                    status=status,
-                    start_date=custom_start,
-                    end_date=custom_end
-                ) }}"
-            >
-                ⬇ Export CSV
-            </a>
-        </div>
-
-        <div>
-            <label>&nbsp;</label>
-            <a class="btn btn-purple" href="{{ url_for('attendance_import') }}">
-                📥 Import CSV
-            </a>
-        </div>
-
-        <div>
-            <label>&nbsp;</label>
-            <button
-                class="btn btn-purple"
-                type="button"
-                onclick="window.print()"
-            >
-                🖨 Print
-            </button>
-        </div>
+    <div>
+        <label>Faculty</label>
+        <select name="faculty">
+            {% for f in faculties %}
+                <option value="{{ f }}" {% if f == faculty %}selected{% endif %}>
+                    {{ f }}
+                </option>
+            {% endfor %}
+        </select>
     </div>
+
+    <div>
+        <label>Year</label>
+        <select name="year">
+            {% for y in years %}
+                <option value="{{ y }}" {% if y == year %}selected{% endif %}>
+                    {{ y }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Class</label>
+        <select name="class_name">
+            <option value="">All Classes</option>
+            {% for c in classes %}
+                <option value="{{ c }}" {% if c == class_name %}selected{% endif %}>
+                    {{ c }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Period</label>
+        <select name="period">
+            <option value="today" {% if period == "today" %}selected{% endif %}>Today</option>
+            <option value="week" {% if period == "week" %}selected{% endif %}>This Week</option>
+            <option value="month" {% if period == "month" %}selected{% endif %}>This Month</option>
+            <option value="year" {% if period == "year" %}selected{% endif %}>This Year</option>
+            <option value="custom" {% if period == "custom" %}selected{% endif %}>Custom Date Range</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Subject</label>
+        <select name="subject">
+            <option value="">All Subjects</option>
+            {% for s in subjects %}
+                <option value="{{ s }}" {% if s == subject %}selected{% endif %}>
+                    {{ s }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Lecture / Time</label>
+        <select name="slot">
+            <option value="">All Lectures</option>
+            {% for s in slots %}
+                <option value="{{ s }}" {% if s == slot %}selected{% endif %}>
+                    {{ s }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div>
+        <label>Status</label>
+        <select name="status">
+            <option value="">All Statuses</option>
+            <option value="taken" {% if status == "taken" %}selected{% endif %}>Taken</option>
+            <option value="not_taken" {% if status == "not_taken" %}selected{% endif %}>Not Taken</option>
+            <option value="cancelled" {% if status == "cancelled" %}selected{% endif %}>Cancelled</option>
+        </select>
+    </div>
+
+    <div>
+        <label>Start Date</label>
+        <input type="date" name="start_date" value="{{ custom_start }}">
+    </div>
+
+    <div>
+        <label>End Date</label>
+        <input type="date" name="end_date" value="{{ custom_end }}">
+    </div>
+
+    <div>
+        <label>&nbsp;</label>
+        <button class="btn btn-blue" type="submit">
+            Generate Report
+        </button>
+    </div>
+
+    <div>
+        <label>&nbsp;</label>
+        <a
+            class="btn btn-green"
+            href="{{ url_for(
+                'export_csv',
+                faculty=faculty,
+                year=year,
+                class_name=class_name,
+                period=period,
+                subject=subject,
+                slot=slot,
+                status=status,
+                start_date=custom_start,
+                end_date=custom_end
+            ) }}"
+        >
+            ⬇ Export CSV
+        </a>
+    </div>
+
+    <div>
+        <label>&nbsp;</label>
+        <button
+            class="btn btn-purple"
+            type="button"
+            onclick="window.print()"
+        >
+            🖨 Print
+        </button>
+    </div>
+</div>
+
 </form>
 
 <div class="section print-only">
@@ -4317,27 +4298,28 @@ def reports():
         <div class="stat-value blue">{{ stats.total }}</div>
     </div>
 
-    <div class="stat">
-        <div class="stat-title">Taken</div>
-        <div class="stat-value green">{{ stats.taken }}</div>
-    </div>
+<div class="stat">
+    <div class="stat-title">Taken</div>
+    <div class="stat-value green">{{ stats.taken }}</div>
+</div>
 
-    <div class="stat">
-        <div class="stat-title">Not Taken</div>
-        <div class="stat-value red">{{ stats.not_taken }}</div>
-    </div>
+<div class="stat">
+    <div class="stat-title">Not Taken</div>
+    <div class="stat-value red">{{ stats.not_taken }}</div>
+</div>
 
-    <div class="stat">
-        <div class="stat-title">Cancelled</div>
-        <div class="stat-value orange">{{ stats.cancelled }}</div>
-    </div>
+<div class="stat">
+    <div class="stat-title">Cancelled</div>
+    <div class="stat-value orange">{{ stats.cancelled }}</div>
+</div>
 
-    <div class="stat">
-        <div class="stat-title">Attendance %</div>
-        <div class="stat-value purple">
-            {{ "%.1f"|format(stats.percentage) }}%
-        </div>
+<div class="stat">
+    <div class="stat-title">Attendance %</div>
+    <div class="stat-value purple">
+        {{ "%.1f"|format(stats.percentage) }}%
     </div>
+</div>
+
 </div>
 
 <div class="section">
@@ -4348,46 +4330,47 @@ def reports():
         </span>
     </div>
 
-    {% if subject_stats %}
-        <div class="table-wrap">
-            <table>
-                <thead>
+{% if subject_stats %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Subject</th>
+                    <th>Total Lectures</th>
+                    <th>Taken</th>
+                    <th>Not Taken</th>
+                    <th>Cancelled</th>
+                    <th>Attendance %</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for name, data in subject_stats.items() %}
                     <tr>
-                        <th>Subject</th>
-                        <th>Total Lectures</th>
-                        <th>Taken</th>
-                        <th>Not Taken</th>
-                        <th>Cancelled</th>
-                        <th>Attendance %</th>
+                        <td><strong>{{ name }}</strong></td>
+                        <td>{{ data.total }}</td>
+                        <td class="green">{{ data.taken }}</td>
+                        <td class="red">{{ data.not_taken }}</td>
+                        <td class="orange">{{ data.cancelled }}</td>
+                        <td>
+                            {{ "%.1f"|format(data.percentage) }}%
+
+                            <div class="progress">
+                                <div
+                                    class="progress-bar"
+                                    style="width:{{ [data.percentage, 100]|min }}%;"
+                                ></div>
+                            </div>
+                        </td>
                     </tr>
-                </thead>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="empty">No attendance records found.</div>
+{% endif %}
 
-                <tbody>
-                    {% for name, data in subject_stats.items() %}
-                        <tr>
-                            <td><strong>{{ name }}</strong></td>
-                            <td>{{ data.total }}</td>
-                            <td class="green">{{ data.taken }}</td>
-                            <td class="red">{{ data.not_taken }}</td>
-                            <td class="orange">{{ data.cancelled }}</td>
-                            <td>
-                                {{ "%.1f"|format(data.percentage) }}%
-
-                                <div class="progress">
-                                    <div
-                                        class="progress-bar"
-                                        style="width:{{ [data.percentage, 100]|min }}%;"
-                                    ></div>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="empty">No attendance records found.</div>
-    {% endif %}
 </div>
 
 <div class="section">
@@ -4398,527 +4381,263 @@ def reports():
         </span>
     </div>
 
-    {% if records %}
-        <div class="table-wrap">
-            <table>
-                <thead>
+{% if records %}
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Day</th>
+                    <th>Time / Lecture</th>
+                    <th>Faculty</th>
+                    <th>Year</th>
+                    <th>Class</th>
+                    <th>Subject</th>
+                    <th>Teacher</th>
+                    <th>Present Students</th>
+                    <th>Status</th>
+                    <th>Marked By</th>
+                    <th>Marked At</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for r in records %}
                     <tr>
-                        <th>Date</th>
-                        <th>Day</th>
-                        <th>Time / Lecture</th>
-                        <th>Faculty</th>
-                        <th>Year</th>
-                        <th>Class</th>
-                        <th>Subject</th>
-                        <th>Teacher</th>
-                        <th>Present Students</th>
-                        <th>Status</th>
-                        <th>Marked By</th>
-                        <th>Marked At</th>
+                        <td>{{ r.record_date.strftime("%d-%m-%Y") }}</td>
+                        <td>{{ r.day }}</td>
+                        <td>{{ r.slot }}</td>
+                        <td>{{ r.faculty }}</td>
+                        <td>{{ r.year }}</td>
+                        <td>{{ r.class_name or "—" }}</td>
+                        <td><strong>{{ r.subject }}</strong></td>
+                        <td>{{ r.teacher or "—" }}</td>
+                        <td><strong>{{ r.present_count }}</strong></td>
+
+                        <td>
+                            {% if r.status == "taken" %}
+                                <span class="badge badge-taken">TAKEN</span>
+                            {% elif r.status == "not_taken" %}
+                                <span class="badge badge-not">NOT TAKEN</span>
+                            {% else %}
+                                <span class="badge badge-cancel">CANCELLED</span>
+                            {% endif %}
+                        </td>
+
+                        <td>{{ r.marked_by or "—" }}</td>
+
+                        <td>
+                            {{ r.marked_at.strftime("%d-%m-%Y %I:%M:%S %p") if r.marked_at else "—" }}
+                        </td>
                     </tr>
-                </thead>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="empty">
+        No saved attendance records match the selected filters.
+    </div>
+{% endif %}
 
-                <tbody>
-                    {% for r in records %}
-                        <tr>
-                            <td>{{ r.record_date.strftime("%d-%m-%Y") }}</td>
-                            <td>{{ r.day }}</td>
-                            <td>{{ r.slot }}</td>
-                            <td>{{ r.faculty }}</td>
-                            <td>{{ r.year }}</td>
-                            <td>{{ r.class_name or "—" }}</td>
-                            <td><strong>{{ r.subject }}</strong></td>
-                            <td>{{ r.teacher or "—" }}</td>
-                            <td><strong>{{ r.present_count }}</strong></td>
-
-                            <td>
-                                {% if r.status == "taken" %}
-                                    <span class="badge badge-taken">TAKEN</span>
-                                {% elif r.status == "not_taken" %}
-                                    <span class="badge badge-not">NOT TAKEN</span>
-                                {% else %}
-                                    <span class="badge badge-cancel">CANCELLED</span>
-                                {% endif %}
-                            </td>
-
-                            <td>{{ r.marked_by or "—" }}</td>
-
-                            <td>
-                                {{ r.marked_at.strftime("%d-%m-%Y %I:%M:%S %p") if r.marked_at else "—" }}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <div class="empty">
-            No saved attendance records match the selected filters.
-        </div>
-    {% endif %}
 </div>
 """
 
-    return render_page(
-        content,
-        faculties=faculties,
-        years=years,
-        faculty=faculty,
-        year=year,
-        class_name=class_name,
-        period=period,
-        subject=subject,
-        slot=slot,
-        status=status,
-        custom_start=custom_start,
-        custom_end=custom_end,
-        start_date=start_date,
-        end_date=end_date,
-        records=records,
-        stats=stats,
-        subject_stats=subject_stats,
-        classes=classes,
-        subjects=subjects,
-        slots=slots,
-        page_title="Attendance Reports"
-    )
+return render_page(
+    content,
+    faculties=faculties,
+    years=years,
+    faculty=faculty,
+    year=year,
+    class_name=class_name,
+    period=period,
+    subject=subject,
+    slot=slot,
+    status=status,
+    custom_start=custom_start,
+    custom_end=custom_end,
+    start_date=start_date,
+    end_date=end_date,
+    records=records,
+    stats=stats,
+    subject_stats=subject_stats,
+    classes=classes,
+    subjects=subjects,
+    slots=slots,
+    page_title="Attendance Reports"
+)
 
+============================================================
 
-# ============================================================
-# CSV EXPORT
-# ============================================================
+CSV EXPORT
+
+============================================================
 
 @app.route("/reports/export.csv")
 @admin_required
 def export_csv():
-    faculties = all_faculties()
+faculties = all_faculties()
 
-    faculty = request.args.get(
-        "faculty",
-        faculties[0] if faculties else ""
-    )
+faculty = request.args.get(
+    "faculty",
+    faculties[0] if faculties else ""
+)
 
-    years = years_for_faculty(faculty)
+years = years_for_faculty(faculty)
 
-    year = request.args.get(
-        "year",
-        years[0] if years else ""
-    )
+year = request.args.get(
+    "year",
+    years[0] if years else ""
+)
 
-    class_name = request.args.get(
-        "class_name",
-        ""
-    ).strip()
+class_name = request.args.get(
+    "class_name",
+    ""
+).strip()
 
-    period = request.args.get(
-        "period",
-        "month"
-    )
+period = request.args.get(
+    "period",
+    "month"
+)
 
-    subject = request.args.get(
-        "subject",
-        ""
-    ).strip()
+subject = request.args.get(
+    "subject",
+    ""
+).strip()
 
-    slot = request.args.get(
-        "slot",
-        ""
-    ).strip()
+slot = request.args.get(
+    "slot",
+    ""
+).strip()
 
-    status = request.args.get(
-        "status",
-        ""
-    ).strip()
+status = request.args.get(
+    "status",
+    ""
+).strip()
 
-    custom_start = request.args.get(
-        "start_date",
-        ""
-    )
+custom_start = request.args.get(
+    "start_date",
+    ""
+)
 
-    custom_end = request.args.get(
-        "end_date",
-        ""
-    )
+custom_end = request.args.get(
+    "end_date",
+    ""
+)
 
-    start_date, end_date = period_dates(
-        period,
-        custom_start,
-        custom_end
-    )
+start_date, end_date = period_dates(
+    period,
+    custom_start,
+    custom_end
+)
 
-    records = attendance_query(
-        faculty=faculty,
-        year=year,
-        class_name=class_name,
-        start_date=start_date,
-        end_date=end_date,
-        subject=subject,
-        slot=slot,
-        status=status
-    ).all()
+records = attendance_query(
+    faculty=faculty,
+    year=year,
+    class_name=class_name,
+    start_date=start_date,
+    end_date=end_date,
+    subject=subject,
+    slot=slot,
+    status=status
+).all()
 
-    output = io.StringIO()
-    writer = csv.writer(output)
+output = io.StringIO()
+writer = csv.writer(output)
 
+writer.writerow([
+    "Date",
+    "Day",
+    "Time / Lecture",
+    "Faculty",
+    "Year",
+    "Class",
+    "Subject",
+    "Teacher",
+    "Status",
+    "Present Students",
+    "Marked By",
+    "Marked At"
+])
+
+for r in records:
     writer.writerow([
-        "Date",
-        "Day",
-        "Time / Lecture",
-        "Faculty",
-        "Year",
-        "Class",
-        "Subject",
-        "Teacher",
-        "Status",
-        "Present Students",
-        "Marked By",
-        "Marked At"
+        r.record_date.isoformat(),
+        r.day,
+        r.slot,
+        r.faculty,
+        r.year,
+        r.class_name or "",
+        r.subject,
+        r.teacher or "",
+        VALID_STATUSES.get(r.status, r.status),
+        r.present_count,
+        r.marked_by or "",
+        r.marked_at.strftime("%Y-%m-%d %H:%M:%S")
+        if r.marked_at else ""
     ])
 
-    for r in records:
-        writer.writerow([
-            r.record_date.isoformat(),
-            r.day,
-            r.slot,
-            r.faculty,
-            r.year,
-            r.class_name or "",
-            r.subject,
-            r.teacher or "",
-            VALID_STATUSES.get(r.status, r.status),
-            r.present_count,
-            r.marked_by or "",
-            r.marked_at.strftime("%Y-%m-%d %H:%M:%S")
-            if r.marked_at else ""
-        ])
+filename = (
+    f"SGB_Attendance_{start_date}_{end_date}.csv"
+)
 
-    filename = (
-        f"SGB_Attendance_{start_date}_{end_date}.csv"
-    )
+return Response(
+    output.getvalue(),
+    mimetype="text/csv; charset=utf-8",
+    headers={
+        "Content-Disposition":
+            f'attachment; filename="{filename}"'
+    }
+)
 
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition":
-                f'attachment; filename="{filename}"'
-        }
-    )
+============================================================
 
+COLLEGE LOCATION / GEOFENCE
 
-# ============================================================
-# CSV IMPORT - HISTORICAL ATTENDANCE
-# ============================================================
-
-@app.route("/reports/import", methods=["GET", "POST"])
-@admin_required
-def attendance_import():
-    if request.method == "POST":
-        uploaded = request.files.get("file")
-
-        if not uploaded or not uploaded.filename:
-            flash("Please select a CSV file.")
-            return redirect(url_for("attendance_import"))
-
-        if not uploaded.filename.lower().endswith(".csv"):
-            flash("Only CSV files are supported.")
-            return redirect(url_for("attendance_import"))
-
-        try:
-            text_data = uploaded.read().decode("utf-8-sig")
-        except UnicodeDecodeError:
-            flash("Could not read the CSV. Save it as UTF-8 CSV.")
-            return redirect(url_for("attendance_import"))
-
-        reader = csv.DictReader(io.StringIO(text_data))
-        if not reader.fieldnames:
-            flash("CSV file has no header row.")
-            return redirect(url_for("attendance_import"))
-
-        field_map = {
-            str(name or "").strip().lower(): name
-            for name in reader.fieldnames
-        }
-
-        def value(row, *names):
-            for name in names:
-                actual = field_map.get(name.lower())
-                if actual is not None:
-                    raw = row.get(actual)
-                    if raw is not None:
-                        return str(raw).strip()
-            return ""
-
-        required_columns = [
-            "date", "day", "time / lecture", "faculty",
-            "year", "subject", "status"
-        ]
-        missing = [c for c in required_columns if c not in field_map]
-        if missing:
-            flash("Missing CSV columns: " + ", ".join(missing))
-            return redirect(url_for("attendance_import"))
-
-        status_aliases = {
-            "taken": "taken",
-            "take": "taken",
-            "yes": "taken",
-            "not taken": "not_taken",
-            "not_taken": "not_taken",
-            "not-taken": "not_taken",
-            "no": "not_taken",
-            "cancelled": "cancelled",
-            "canceled": "cancelled",
-            "cancel": "cancelled"
-        }
-
-        added = 0
-        updated = 0
-        skipped = 0
-        errors = []
-        importer = current_user()
-
-        for row_number, row in enumerate(reader, start=2):
-            try:
-                date_text = value(row, "date")
-                record_date = None
-                for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y", "%Y/%m/%d"):
-                    try:
-                        record_date = datetime.strptime(date_text, fmt).date()
-                        break
-                    except ValueError:
-                        pass
-
-                day = value(row, "day").strip().title()
-                slot = value(row, "time / lecture", "time", "lecture")
-                faculty = value(row, "faculty")
-                year = normalize_year(value(row, "year"))
-                class_name = value(row, "class")
-                subject = value(row, "subject")
-                teacher = value(row, "teacher")
-                status = status_aliases.get(value(row, "status").lower())
-
-                if not record_date:
-                    raise ValueError("invalid Date")
-                if day not in DAYS:
-                    raise ValueError("invalid Day")
-                if not all([slot, faculty, year, subject, status]):
-                    raise ValueError("missing required value")
-
-                start, end = parse_slot(slot)
-                if start is None or end is None:
-                    raise ValueError("invalid Time / Lecture; use HH:MM-HH:MM")
-
-                present_text = value(
-                    row,
-                    "present students",
-                    "present count",
-                    "present_count"
-                )
-                if status == "taken":
-                    present_count = int(present_text or 0)
-                    if present_count < 0:
-                        raise ValueError("Present Students cannot be negative")
-                else:
-                    present_count = 0
-
-                marked_by = value(row, "marked by") or importer.name
-                marked_at_text = value(row, "marked at")
-                marked_at = now_ist_naive()
-                if marked_at_text:
-                    for fmt in (
-                        "%Y-%m-%d %H:%M:%S",
-                        "%d-%m-%Y %H:%M:%S",
-                        "%Y-%m-%d %I:%M:%S %p"
-                    ):
-                        try:
-                            marked_at = datetime.strptime(marked_at_text, fmt)
-                            break
-                        except ValueError:
-                            pass
-
-                record = attendance_record_for(
-                    record_date,
-                    faculty,
-                    year,
-                    day,
-                    slot,
-                    subject,
-                    class_name
-                )
-
-                if record:
-                    record.teacher = teacher
-                    record.status = status
-                    record.present_count = present_count
-                    record.marked_by_user_id = importer.id
-                    record.marked_by = marked_by
-                    record.marked_at = marked_at
-                    updated += 1
-                else:
-                    db.session.add(
-                        Attendance(
-                            record_date=record_date,
-                            faculty=faculty,
-                            year=year,
-                            class_name=class_name,
-                            day=day,
-                            slot=slot,
-                            subject=subject,
-                            teacher=teacher,
-                            status=status,
-                            marked_by_user_id=importer.id,
-                            marked_by=marked_by,
-                            present_count=present_count,
-                            marked_at=marked_at
-                        )
-                    )
-                    added += 1
-
-            except Exception as exc:
-                skipped += 1
-                if len(errors) < 8:
-                    errors.append(f"Row {row_number}: {exc}")
-
-        try:
-            db.session.commit()
-        except Exception as exc:
-            db.session.rollback()
-            flash(f"Import failed; no rows were saved: {exc}")
-            return redirect(url_for("attendance_import"))
-
-        message = f"CSV import complete: {added} added, {updated} updated, {skipped} skipped."
-        if errors:
-            message += " " + " | ".join(errors)
-        flash(message)
-        return redirect(url_for("reports", period="custom"))
-
-    content = r"""
-<div class="hero">
-    <h1>📥 Import Attendance CSV</h1>
-    <p>Bulk upload historical lecture attendance into PostgreSQL</p>
-</div>
-
-<div class="section">
-    <div class="alert">
-        This import is meant for <b>past attendance</b>. It does not bypass or change your normal live attendance rules.
-        The regular attendance page still controls live marking.
-    </div>
-
-    <h2>Upload CSV</h2>
-    <form method="post" enctype="multipart/form-data">
-        <div class="filter-grid">
-            <div>
-                <label>Attendance CSV</label>
-                <input type="file" name="file" accept=".csv,text/csv" required>
-            </div>
-            <div style="display:flex;align-items:end;gap:8px;flex-wrap:wrap;">
-                <button class="btn btn-purple" type="submit">📥 Import CSV</button>
-                <a class="btn btn-blue" href="{{ url_for('attendance_import_template') }}">⬇ Download Template</a>
-            </div>
-        </div>
-    </form>
-</div>
-
-<div class="section">
-    <h2>CSV columns</h2>
-    <div class="table-wrap">
-        <table>
-            <thead>
-                <tr><th>Column</th><th>Example</th><th>Required</th></tr>
-            </thead>
-            <tbody>
-                <tr><td>Date</td><td>2026-09-01</td><td>Yes</td></tr>
-                <tr><td>Day</td><td>Tuesday</td><td>Yes</td></tr>
-                <tr><td>Time / Lecture</td><td>09:00-10:00</td><td>Yes</td></tr>
-                <tr><td>Faculty</td><td>Science</td><td>Yes</td></tr>
-                <tr><td>Year</td><td>2nd Year</td><td>Yes</td></tr>
-                <tr><td>Class</td><td>FY BSc</td><td>No</td></tr>
-                <tr><td>Subject</td><td>Physics</td><td>Yes</td></tr>
-                <tr><td>Teacher</td><td>R.S.Shaikh</td><td>No</td></tr>
-                <tr><td>Status</td><td>Taken / Not Taken / Cancelled</td><td>Yes</td></tr>
-                <tr><td>Present Students</td><td>42</td><td>No</td></tr>
-                <tr><td>Marked By</td><td>A.B.Kurhe</td><td>No</td></tr>
-                <tr><td>Marked At</td><td>2026-09-01 09:30:00</td><td>No</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-"""
-    return render_page(content, page_title="Import Attendance CSV")
-
-
-@app.route("/reports/import-template.csv")
-@admin_required
-def attendance_import_template():
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow([
-        "Date", "Day", "Time / Lecture", "Faculty", "Year", "Class",
-        "Subject", "Teacher", "Status", "Present Students", "Marked By", "Marked At"
-    ])
-    writer.writerow([
-        "2026-09-01", "Tuesday", "09:00-10:00", "Science", "2nd Year", "FY BSc",
-        "Physics", "R.S.Shaikh", "Taken", "42", "A.B.Kurhe", "2026-09-01 09:30:00"
-    ])
-    writer.writerow([
-        "2026-09-01", "Tuesday", "10:00-11:00", "Science", "2nd Year", "FY BSc",
-        "Chemistry", "J.S.Pulle", "Not Taken", "0", "A.B.Kurhe", "2026-09-01 10:15:00"
-    ])
-
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": 'attachment; filename="SGB_Attendance_Import_Template.csv"'
-        }
-    )
-
-
-# ============================================================
-# COLLEGE LOCATION / GEOFENCE
-# ============================================================
+============================================================
 
 @app.route("/admin/college-location", methods=["GET", "POST"])
 @admin_required
 def college_location():
-    location = get_college_location()
+location = get_college_location()
 
-    if request.method == "POST":
-        try:
-            latitude = float(request.form.get("latitude", ""))
-            longitude = float(request.form.get("longitude", ""))
-            radius = float(request.form.get("radius_meters", "150"))
-        except (TypeError, ValueError):
-            flash("Please provide a valid GPS location and radius.")
-            return redirect(url_for("college_location"))
-
-        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
-            flash("Invalid GPS coordinates.")
-            return redirect(url_for("college_location"))
-
-        if not (50 <= radius <= 1000):
-            flash("Radius must be between 50 and 1000 meters.")
-            return redirect(url_for("college_location"))
-
-        if not location:
-            location = CollegeLocation(
-                latitude=latitude,
-                longitude=longitude,
-                radius_meters=radius,
-                updated_at=now_ist_naive()
-            )
-            db.session.add(location)
-        else:
-            location.latitude = latitude
-            location.longitude = longitude
-            location.radius_meters = radius
-            location.updated_at = now_ist_naive()
-
-        db.session.commit()
-        flash("📍 College location saved successfully. Teachers can now mark attendance only inside this area.")
+if request.method == "POST":
+    try:
+        latitude = float(request.form.get("latitude", ""))
+        longitude = float(request.form.get("longitude", ""))
+        radius = float(request.form.get("radius_meters", "150"))
+    except (TypeError, ValueError):
+        flash("Please provide a valid GPS location and radius.")
         return redirect(url_for("college_location"))
 
-    content = r"""
+    if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+        flash("Invalid GPS coordinates.")
+        return redirect(url_for("college_location"))
+
+    if not (50 <= radius <= 1000):
+        flash("Radius must be between 50 and 1000 meters.")
+        return redirect(url_for("college_location"))
+
+    if not location:
+        location = CollegeLocation(
+            latitude=latitude,
+            longitude=longitude,
+            radius_meters=radius,
+            updated_at=now_ist_naive()
+        )
+        db.session.add(location)
+    else:
+        location.latitude = latitude
+        location.longitude = longitude
+        location.radius_meters = radius
+        location.updated_at = now_ist_naive()
+
+    db.session.commit()
+    flash("📍 College location saved successfully. Teachers can now mark attendance only inside this area.")
+    return redirect(url_for("college_location"))
+
+content = r"""
+
 <div class="hero">
     <h1>📍 College Attendance Location</h1>
     <p>Set the official college GPS point. Teachers must be inside the allowed radius to mark attendance.</p>
@@ -4928,33 +4647,34 @@ def college_location():
     <h2>Set location from this device</h2>
     <p class="meta">Open this page while you are physically at the college. Then click <b>Use My Current Location</b>.</p>
 
-    {% if location %}
-        <div class="alert">
-            Current location: {{ "%.6f"|format(location.latitude) }}, {{ "%.6f"|format(location.longitude) }}
-            • Radius: {{ location.radius_meters|round|int }} m
-        </div>
-    {% endif %}
+{% if location %}
+    <div class="alert">
+        Current location: {{ "%.6f"|format(location.latitude) }}, {{ "%.6f"|format(location.longitude) }}
+        • Radius: {{ location.radius_meters|round|int }} m
+    </div>
+{% endif %}
 
-    <form method="post" id="locationForm">
-        <div class="filter-grid">
-            <div>
-                <label>Latitude</label>
-                <input id="latitude" name="latitude" required readonly value="{{ location.latitude if location else '' }}">
-            </div>
-            <div>
-                <label>Longitude</label>
-                <input id="longitude" name="longitude" required readonly value="{{ location.longitude if location else '' }}">
-            </div>
-            <div>
-                <label>Allowed Radius (meters)</label>
-                <input type="number" name="radius_meters" min="50" max="1000" step="1" value="{{ location.radius_meters|round|int if location else 150 }}" required>
-            </div>
+<form method="post" id="locationForm">
+    <div class="filter-grid">
+        <div>
+            <label>Latitude</label>
+            <input id="latitude" name="latitude" required readonly value="{{ location.latitude if location else '' }}">
         </div>
-        <br>
-        <button type="button" class="btn btn-blue" onclick="captureCollegeLocation()">📍 Use My Current Location</button>
-        <button type="submit" class="btn btn-green" id="saveLocation" disabled>💾 Save College Location</button>
-        <p id="locationMessage" class="meta" style="margin-top:10px;"></p>
-    </form>
+        <div>
+            <label>Longitude</label>
+            <input id="longitude" name="longitude" required readonly value="{{ location.longitude if location else '' }}">
+        </div>
+        <div>
+            <label>Allowed Radius (meters)</label>
+            <input type="number" name="radius_meters" min="50" max="1000" step="1" value="{{ location.radius_meters|round|int if location else 150 }}" required>
+        </div>
+    </div>
+    <br>
+    <button type="button" class="btn btn-blue" onclick="captureCollegeLocation()">📍 Use My Current Location</button>
+    <button type="submit" class="btn btn-green" id="saveLocation" disabled>💾 Save College Location</button>
+    <p id="locationMessage" class="meta" style="margin-top:10px;"></p>
+</form>
+
 </div>
 
 <div class="section">
@@ -4985,89 +4705,92 @@ function captureCollegeLocation() {
     }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
 }
 </script>
+
 """
 
-    return render_page(
-        content,
-        location=location,
-        page_title="College Location"
-    )
+return render_page(
+    content,
+    location=location,
+    page_title="College Location"
+)
 
+============================================================
 
-# ============================================================
-# ADMIN USER / ACCESS CONTROL
-# ============================================================
+ADMIN USER / ACCESS CONTROL
+
+============================================================
 
 @app.route("/access", methods=["GET", "POST"])
 @admin_required
 def access_control():
-    if request.method == "POST":
-        action = request.form.get("action", "")
+if request.method == "POST":
+action = request.form.get("action", "")
 
-        if action == "create":
-            name = request.form.get("name", "").strip()
-            username = request.form.get("username", "").strip()
-            password = request.form.get("password", "")
+    if action == "create":
+        name = request.form.get("name", "").strip()
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "")
 
-            if not name or not username or not password:
-                flash("Name, username and password are required.")
-            elif User.query.filter_by(username=username).first():
-                flash("Username already exists.")
-            else:
-                user = User(
-                    name=name,
-                    username=username,
-                    password_hash=generate_password_hash(password),
-                    is_admin=False
-                )
+        if not name or not username or not password:
+            flash("Name, username and password are required.")
+        elif User.query.filter_by(username=username).first():
+            flash("Username already exists.")
+        else:
+            user = User(
+                name=name,
+                username=username,
+                password_hash=generate_password_hash(password),
+                is_admin=False
+            )
 
-                db.session.add(user)
-                db.session.commit()
+            db.session.add(user)
+            db.session.commit()
 
-                flash("User created successfully.")
+            flash("User created successfully.")
 
-        elif action == "make_admin":
-            try:
-                user_id = int(request.form.get("user_id", "0"))
-            except Exception:
-                user_id = 0
+    elif action == "make_admin":
+        try:
+            user_id = int(request.form.get("user_id", "0"))
+        except Exception:
+            user_id = 0
 
-            user = db.session.get(User, user_id)
+        user = db.session.get(User, user_id)
 
-            if user:
-                user.is_admin = True
-                db.session.commit()
-                flash("User promoted to administrator.")
+        if user:
+            user.is_admin = True
+            db.session.commit()
+            flash("User promoted to administrator.")
 
-        elif action == "remove_admin":
-            try:
-                user_id = int(request.form.get("user_id", "0"))
-            except Exception:
-                user_id = 0
+    elif action == "remove_admin":
+        try:
+            user_id = int(request.form.get("user_id", "0"))
+        except Exception:
+            user_id = 0
 
-            user = db.session.get(User, user_id)
+        user = db.session.get(User, user_id)
 
-            if user and user.username != ADMIN_USERNAME:
-                user.is_admin = False
-                db.session.commit()
-                flash("Administrator permission removed.")
+        if user and user.username != ADMIN_USERNAME:
+            user.is_admin = False
+            db.session.commit()
+            flash("Administrator permission removed.")
 
-        elif action == "delete":
-            try:
-                user_id = int(request.form.get("user_id", "0"))
-            except Exception:
-                user_id = 0
+    elif action == "delete":
+        try:
+            user_id = int(request.form.get("user_id", "0"))
+        except Exception:
+            user_id = 0
 
-            user = db.session.get(User, user_id)
+        user = db.session.get(User, user_id)
 
-            if user and user.username != ADMIN_USERNAME:
-                db.session.delete(user)
-                db.session.commit()
-                flash("User deleted.")
+        if user and user.username != ADMIN_USERNAME:
+            db.session.delete(user)
+            db.session.commit()
+            flash("User deleted.")
 
-    users = User.query.order_by(User.id.asc()).all()
+users = User.query.order_by(User.id.asc()).all()
 
-    content = r"""
+content = r"""
+
 <div class="hero">
     <h1>👥 User Management</h1>
     <p>Manage administrator accounts and permissions</p>
@@ -5076,188 +4799,192 @@ def access_control():
 <div class="section">
     <h2>➕ Add User</h2>
 
-    <form method="post">
-        <input type="hidden" name="action" value="create">
+<form method="post">
+    <input type="hidden" name="action" value="create">
 
-        <div class="filter-grid">
-            <div>
-                <label>Name</label>
-                <input name="name" required>
-            </div>
-
-            <div>
-                <label>Username</label>
-                <input name="username" required>
-            </div>
-
-            <div>
-                <label>Password</label>
-                <input type="password" name="password" required>
-            </div>
+    <div class="filter-grid">
+        <div>
+            <label>Name</label>
+            <input name="name" required>
         </div>
 
-        <br>
+        <div>
+            <label>Username</label>
+            <input name="username" required>
+        </div>
 
-        <button class="btn btn-blue" type="submit">
-            Create User
-        </button>
-    </form>
+        <div>
+            <label>Password</label>
+            <input type="password" name="password" required>
+        </div>
+    </div>
+
+    <br>
+
+    <button class="btn btn-blue" type="submit">
+        Create User
+    </button>
+</form>
+
 </div>
 
 <div class="section">
     <h2>👤 Users</h2>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Username</th>
+                <th>Administrator</th>
+                <th>Attendance Subject</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for u in users %}
                 <tr>
-                    <th>Name</th>
-                    <th>Username</th>
-                    <th>Administrator</th>
-                    <th>Attendance Subject</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
+                    <td>{{ u.name }}</td>
+                    <td>{{ u.username }}</td>
+                    <td>
+                        {% if u.is_admin %}
+                            <span class="badge badge-taken">ADMIN</span>
+                        {% else %}
+                            <span class="badge badge-none">TEACHER</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ u.assigned_subject or "All subjects" }}</td>
+                    <td>
+                        {% if u.username != admin_username %}
+                            <div class="action-row">
 
-            <tbody>
-                {% for u in users %}
-                    <tr>
-                        <td>{{ u.name }}</td>
-                        <td>{{ u.username }}</td>
-                        <td>
-                            {% if u.is_admin %}
-                                <span class="badge badge-taken">ADMIN</span>
-                            {% else %}
-                                <span class="badge badge-none">TEACHER</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ u.assigned_subject or "All subjects" }}</td>
-                        <td>
-                            {% if u.username != admin_username %}
-                                <div class="action-row">
-
-                                    {% if u.is_admin %}
-                                        <form method="post">
-                                            <input type="hidden" name="action" value="remove_admin">
-                                            <input type="hidden" name="user_id" value="{{ u.id }}">
-                                            <button class="btn btn-orange btn-small">
-                                                Remove Admin
-                                            </button>
-                                        </form>
-                                    {% else %}
-                                        <form method="post">
-                                            <input type="hidden" name="action" value="make_admin">
-                                            <input type="hidden" name="user_id" value="{{ u.id }}">
-                                            <button class="btn btn-green btn-small">
-                                                Make Admin
-                                            </button>
-                                        </form>
-                                    {% endif %}
-
-                                    <form
-                                        method="post"
-                                        onsubmit="return confirm('Delete this user?')"
-                                    >
-                                        <input type="hidden" name="action" value="delete">
+                                {% if u.is_admin %}
+                                    <form method="post">
+                                        <input type="hidden" name="action" value="remove_admin">
                                         <input type="hidden" name="user_id" value="{{ u.id }}">
-                                        <button class="btn btn-red btn-small">
-                                            Delete
+                                        <button class="btn btn-orange btn-small">
+                                            Remove Admin
                                         </button>
                                     </form>
-                                </div>
-                            {% else %}
-                                <span class="badge badge-live">PRIMARY ADMIN</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+                                {% else %}
+                                    <form method="post">
+                                        <input type="hidden" name="action" value="make_admin">
+                                        <input type="hidden" name="user_id" value="{{ u.id }}">
+                                        <button class="btn btn-green btn-small">
+                                            Make Admin
+                                        </button>
+                                    </form>
+                                {% endif %}
+
+                                <form
+                                    method="post"
+                                    onsubmit="return confirm('Delete this user?')"
+                                >
+                                    <input type="hidden" name="action" value="delete">
+                                    <input type="hidden" name="user_id" value="{{ u.id }}">
+                                    <button class="btn btn-red btn-small">
+                                        Delete
+                                    </button>
+                                </form>
+                            </div>
+                        {% else %}
+                            <span class="badge badge-live">PRIMARY ADMIN</span>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
 </div>
 """
 
-    return render_page(
-        content,
-        users=users,
-        admin_username=ADMIN_USERNAME,
-        page_title="User Management"
-    )
+return render_page(
+    content,
+    users=users,
+    admin_username=ADMIN_USERNAME,
+    page_title="User Management"
+)
 
+============================================================
 
-# ============================================================
-# TIMETABLE MANAGEMENT
-# ============================================================
+TIMETABLE MANAGEMENT
+
+============================================================
 
 @app.route("/admin/timetable", methods=["GET", "POST"])
 @admin_required
 def timetable_manage():
-    if request.method == "POST":
-        action = request.form.get("action", "")
+if request.method == "POST":
+action = request.form.get("action", "")
 
-        if action == "add":
-            faculty = request.form.get("faculty", "").strip()
-            year = normalize_year(request.form.get("year", "").strip())
-            day = request.form.get("day", "").strip()
-            slot = request.form.get("slot", "").strip()
-            subject = request.form.get("subject", "").strip()
-            teacher = request.form.get("teacher", "").strip()
-            class_name = request.form.get("class_name", "").strip()
-            room = request.form.get("room", "").strip()
+    if action == "add":
+        faculty = request.form.get("faculty", "").strip()
+        year = normalize_year(request.form.get("year", "").strip())
+        day = request.form.get("day", "").strip()
+        slot = request.form.get("slot", "").strip()
+        subject = request.form.get("subject", "").strip()
+        teacher = request.form.get("teacher", "").strip()
+        class_name = request.form.get("class_name", "").strip()
+        room = request.form.get("room", "").strip()
 
-            if not all([faculty, year, day, slot, subject]):
-                flash("Faculty, year, day, time and subject are required.")
-            elif day not in DAYS:
-                flash("Invalid day.")
+        if not all([faculty, year, day, slot, subject]):
+            flash("Faculty, year, day, time and subject are required.")
+        elif day not in DAYS:
+            flash("Invalid day.")
+        else:
+            duplicate = Timetable.query.filter_by(
+                faculty=faculty,
+                year=year,
+                day=day,
+                slot=slot,
+                subject=subject
+            ).first()
+
+            if duplicate:
+                flash("That timetable lecture already exists.")
             else:
-                duplicate = Timetable.query.filter_by(
-                    faculty=faculty,
-                    year=year,
-                    day=day,
-                    slot=slot,
-                    subject=subject
-                ).first()
-
-                if duplicate:
-                    flash("That timetable lecture already exists.")
-                else:
-                    db.session.add(
-                        Timetable(
-                            faculty=faculty,
-                            year=year,
-                            day=day,
-                            slot=slot,
-                            subject=subject,
-                            teacher=teacher,
-                            class_name=class_name,
-                            room=room
-                        )
+                db.session.add(
+                    Timetable(
+                        faculty=faculty,
+                        year=year,
+                        day=day,
+                        slot=slot,
+                        subject=subject,
+                        teacher=teacher,
+                        class_name=class_name,
+                        room=room
                     )
-                    db.session.commit()
-                    flash("Timetable lecture added.")
-
-        elif action == "delete":
-            try:
-                row_id = int(request.form.get("row_id", "0"))
-            except Exception:
-                row_id = 0
-
-            row = db.session.get(Timetable, row_id)
-
-            if row:
-                db.session.delete(row)
+                )
                 db.session.commit()
-                flash("Timetable lecture deleted.")
+                flash("Timetable lecture added.")
 
-    rows = Timetable.query.order_by(
-        Timetable.faculty.asc(),
-        Timetable.year.asc(),
-        Timetable.day.asc(),
-        Timetable.slot.asc(),
-        Timetable.id.asc()
-    ).all()
+    elif action == "delete":
+        try:
+            row_id = int(request.form.get("row_id", "0"))
+        except Exception:
+            row_id = 0
 
-    content = r"""
+        row = db.session.get(Timetable, row_id)
+
+        if row:
+            db.session.delete(row)
+            db.session.commit()
+            flash("Timetable lecture deleted.")
+
+rows = Timetable.query.order_by(
+    Timetable.faculty.asc(),
+    Timetable.year.asc(),
+    Timetable.day.asc(),
+    Timetable.slot.asc(),
+    Timetable.id.asc()
+).all()
+
+content = r"""
+
 <div class="hero">
     <h1>⚙ Timetable Management</h1>
     <p>Optional administrator tools for adding/removing timetable entries</p>
@@ -5266,212 +4993,100 @@ def timetable_manage():
 <div class="section">
     <h2>➕ Add Lecture</h2>
 
-    <form method="post">
-        <input type="hidden" name="action" value="add">
+<form method="post">
+    <input type="hidden" name="action" value="add">
 
-        <div class="filter-grid">
-            <div>
-                <label>Faculty</label>
-                <select name="faculty" required>
-                    {% for f in faculty_options %}
-                        <option value="{{ f }}">{{ f }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label>Year</label>
-                <select name="year" required>
-                    {% for y in year_options %}
-                        <option value="{{ y }}">{{ y }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label>Day</label>
-                <select name="day" required>
-                    {% for d in days %}
-                        <option value="{{ d }}">{{ d }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div>
-                <label>Time Slot</label>
-                <input
-                    name="slot"
-                    placeholder="09:00-10:00"
-                    required
-                >
-            </div>
-
-            <div>
-                <label>Subject</label>
-                <input name="subject" required>
-            </div>
-
-            <div>
-                <label>Teacher</label>
-                <input name="teacher">
-            </div>
-
-            <div>
-                <label>Class / Section</label>
-                <input name="class_name">
-            </div>
-
-            <div>
-                <label>Room</label>
-                <input name="room">
-            </div>
+    <div class="filter-grid">
+        <div>
+            <label>Faculty</label>
+            <select name="faculty" required>
+                {% for f in faculty_options %}
+                    <option value="{{ f }}">{{ f }}</option>
+                {% endfor %}
+            </select>
         </div>
 
-        <br>
+        <div>
+            <label>Year</label>
+            <select name="year" required>
+                {% for y in year_options %}
+                    <option value="{{ y }}">{{ y }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-        <button class="btn btn-blue" type="submit">
-            Add Lecture
-        </button>
-    </form>
+        <div>
+            <label>Day</label>
+            <select name="day" required>
+                {% for d in days %}
+                    <option value="{{ d }}">{{ d }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div>
+            <label>Time Slot</label>
+            <input
+                name="slot"
+                placeholder="09:00-10:00"
+                required
+            >
+        </div>
+
+        <div>
+            <label>Subject</label>
+            <input name="subject" required>
+        </div>
+
+        <div>
+            <label>Teacher</label>
+            <input name="teacher">
+        </div>
+
+        <div>
+            <label>Class / Section</label>
+            <input name="class_name">
+        </div>
+
+        <div>
+            <label>Room</label>
+            <input name="room">
+        </div>
+    </div>
+
+    <br>
+
+    <button class="btn btn-blue" type="submit">
+        Add Lecture
+    </button>
+</form>
+
 </div>
 
 <div class="section">
     <h2>Current Timetable Records</h2>
 
-    <div class="table-wrap">
-        <table>
-            <thead>
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Faculty</th>
+                <th>Year</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Subject</th>
+                <th>Teacher</th>
+                <th>Class</th>
+                <th>Room</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for row in rows %}
                 <tr>
-                    <th>Faculty</th>
-                    <th>Year</th>
-                    <th>Day</th>
-                    <th>Time</th>
-                    <th>Subject</th>
-                    <th>Teacher</th>
-                    <th>Class</th>
-                    <th>Room</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for row in rows %}
-                    <tr>
-                        <td>{{ row.faculty }}</td>
-                        <td>{{ row.year }}</td>
-                        <td>{{ row.day }}</td>
-                        <td>{{ row.slot }}</td>
-                        <td><strong>{{ row.subject }}</strong></td>
-                        <td>{{ row.teacher or "—" }}</td>
-                        <td>{{ row.class_name or "—" }}</td>
-                        <td>{{ row.room or "—" }}</td>
-                        <td>
-                            <form
-                                method="post"
-                                onsubmit="return confirm('Delete this timetable entry?')"
-                            >
-                                <input type="hidden" name="action" value="delete">
-                                <input type="hidden" name="row_id" value="{{ row.id }}">
-                                <button class="btn btn-red btn-small">
-                                    Delete
-                                </button>
-                            </form>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-"""
-
-    return render_page(
-        content,
-        rows=rows,
-        faculty_options=FACULTY_ORDER,
-        year_options=YEAR_ORDER,
-        days=DAYS,
-        page_title="Timetable Management"
-    )
-
-
-# ============================================================
-# HEALTH CHECK
-# ============================================================
-
-@app.route("/health")
-def health():
-    return {
-        "status": "ok",
-        "application": "SGB College Management System",
-        "timezone": "Asia/Kolkata",
-        "current_time": now_ist().isoformat(),
-        "timetable_lectures": Timetable.query.count(),
-        "attendance_records": Attendance.query.count()
-    }
-
-
-# ============================================================
-# ERROR HANDLERS
-# ============================================================
-
-@app.errorhandler(404)
-def not_found(error):
-    content = """
-<div class="empty">
-    <h1>404</h1>
-    <p>Page not found.</p>
-    <a class="btn btn-blue" href="{{ url_for('home') }}">Go Home</a>
-</div>
-"""
-    return render_page(
-        content,
-        page_title="404"
-    ), 404
-
-
-@app.errorhandler(500)
-def server_error(error):
-    db.session.rollback()
-
-    content = """
-<div class="empty">
-    <h1>500</h1>
-    <p>Something went wrong on the server.</p>
-    <a class="btn btn-blue" href="{{ url_for('home') }}">Go Home</a>
-</div>
-"""
-    return render_page(
-        content,
-        page_title="500"
-    ), 500
-
-
-# ============================================================
-# APPLICATION START
-# ============================================================
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", "5000"))
-
-    print("=" * 65)
-    print("SGB COLLEGE MANAGEMENT SYSTEM")
-    print("=" * 65)
-    print("Timezone:", "Asia/Kolkata")
-    print(
-        "Current India Time:",
-        now_ist().strftime("%d-%m-%Y %I:%M:%S %p")
-    )
-    print("Local URL:", f"http://127.0.0.1:{port}")
-    print("Admin username:", ADMIN_USERNAME)
-    print(
-        "Admin password:",
-        "(set via ADMIN_PASSWORD environment variable)"
-    )
-    print("=" * 65)
-
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
-    )
+                    <td>{{ row.faculty }}</td>
+                    <td>{{ row.year }}</td>
+                    <td>{{ row.day }}</td>
+                    <td>{{ row.slot }}</td>
+                    <td><s
